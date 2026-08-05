@@ -626,10 +626,20 @@ _helm_up() {
     if [[ -n "$status" ]]; then
       info "Removing previous '${status}' release: ${release}"
       helm uninstall "${release}" -n "${NS}" >>"$LOG" 2>&1 || true
-      sleep 5  # allow Terminating resources to clear before reinstalling
+      sleep 5
     fi
     run "Deploying ${release}" helm upgrade --install "${release}" "${CHARTS_DIR}/${chart}" \
-      --namespace "${NS}" --wait --timeout 10m "$@"
+      --namespace "${NS}" "$@"
+    # Wait separately so a slow image pull warns instead of aborting the installer
+    local _wl
+    _wl=$(kubectl get deploy,sts -n "${NS}" \
+      -l "app.kubernetes.io/instance=${release}" -o name 2>/dev/null | head -1 || true)
+    if [[ -n "${_wl:-}" ]]; then
+      _spin_start "Waiting for ${release}"
+      kubectl rollout status "${_wl}" -n "${NS}" --timeout=15m >>"$LOG" 2>&1 \
+        && _spin_stop "${release} ready" \
+        || { _spin_stop "${release}"; warn "${release} not ready in 15m — check: kubectl get pods -n ${NS}"; }
+    fi
   fi
 }
 
