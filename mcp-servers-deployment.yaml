@@ -28,7 +28,8 @@ spec:
             fastmcp==3.2.4
             "qdrant-client>=1.7,<1.12"
             fastembed
-            psycopg2-binary 2>&1
+            psycopg2-binary
+            "neo4j>=5.0,<6.0" 2>&1
         volumeMounts:
         - name: site-packages
           mountPath: /site-packages
@@ -180,6 +181,40 @@ spec:
         readinessProbe:
           tcpSocket:
             port: 9108
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+      - name: vaultwarden-mcp
+        image: python:3.12-slim
+        command: [python3, /app/vaultwarden_server.py]
+        env:
+        - name: PYTHONPATH
+          value: /site-packages
+        - name: VW_URL
+          value: "http://vaultwarden.uns.svc.cluster.local"
+        - name: VW_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: vaultwarden-user-creds
+              key: VW_EMAIL
+        - name: VW_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: vaultwarden-user-creds
+              key: VW_PASSWORD
+        ports:
+        - containerPort: 9111
+        volumeMounts:
+        - name: app
+          mountPath: /app
+        - name: site-packages
+          mountPath: /site-packages
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits:   {cpu: 500m, memory: 256Mi}
+        readinessProbe:
+          tcpSocket:
+            port: 9111
           initialDelaySeconds: 5
           periodSeconds: 5
 
