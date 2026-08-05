@@ -1,0 +1,27 @@
+image:
+  repository: emqx
+  tag: "5.8"
+  pullPolicy: IfNotPresent
+
+auth:
+  dashboard:
+    username: admin
+    password: "fde-emqx-secret"
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+
+storage:
+  data: 5Gi
+
+nodePort:
+  mqtt: 31883
+  dashboard: 32083
+
+global:
+  storageClass: ""

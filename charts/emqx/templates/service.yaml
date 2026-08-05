@@ -1,0 +1,57 @@
+# Headless service for StatefulSet DNS
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "emqx.fullname" . }}
+  labels:
+    {{- include "emqx.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    app: {{ include "emqx.fullname" . }}
+  ports:
+  - name: mqtt
+    port: 1883
+  - name: dashboard
+    port: 18083
+  - name: clustering
+    port: 4370
+---
+# ClusterIP for in-cluster access (in-cluster broker address)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "emqx.fullname" . }}-svc
+  labels:
+    {{- include "emqx.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: {{ include "emqx.fullname" . }}
+  ports:
+  - name: mqtt
+    port: 1883
+    targetPort: 1883
+  - name: dashboard
+    port: 18083
+    targetPort: 18083
+---
+# NodePort for external access
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "emqx.fullname" . }}-ext
+  labels:
+    {{- include "emqx.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    app: {{ include "emqx.fullname" . }}
+  ports:
+  - name: mqtt
+    port: 1883
+    targetPort: 1883
+    nodePort: {{ .Values.nodePort.mqtt }}
+  - name: dashboard
+    port: 18083
+    targetPort: 18083
+    nodePort: {{ .Values.nodePort.dashboard }}

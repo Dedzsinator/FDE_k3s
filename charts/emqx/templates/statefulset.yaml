@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "emqx.fullname" . }}
+  labels:
+    {{- include "emqx.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "emqx.fullname" . }}
+  serviceName: {{ include "emqx.fullname" . }}
+  template:
+    metadata:
+      labels:
+        {{- include "emqx.labels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: emqx
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: EMQX_DASHBOARD__DEFAULT_USERNAME
+          value: {{ .Values.auth.dashboard.username | quote }}
+        - name: EMQX_DASHBOARD__DEFAULT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "emqx.fullname" . }}-secret
+              key: EMQX_DASHBOARD_PASSWORD
+        - name: EMQX_LOG__CONSOLE__LEVEL
+          value: warning
+        - name: EMQX_NODE__NAME
+          value: "emqx@{{ include "emqx.fullname" . }}-0.{{ include "emqx.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local"
+        - name: EMQX_CLUSTER__DISCOVERY_STRATEGY
+          value: static
+        - name: EMQX_CLUSTER__STATIC__SEEDS
+          value: "emqx@{{ include "emqx.fullname" . }}-0.{{ include "emqx.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local"
+        ports:
+        - containerPort: 1883
+          name: mqtt
+        - containerPort: 18083
+          name: dashboard
+        - containerPort: 4370
+          name: clustering
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        readinessProbe:
+          httpGet:
+            path: /api/v5/status
+            port: 18083
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 6
+        livenessProbe:
+          tcpSocket:
+            port: 1883
+          initialDelaySeconds: 60
+          periodSeconds: 20
+        volumeMounts:
+        - name: data
+          mountPath: /opt/emqx/data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: {{ .Values.global.storageClass | quote }}
+      resources:
+        requests:
+          storage: {{ .Values.storage.data }}
