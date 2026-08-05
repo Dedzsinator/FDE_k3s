@@ -1,0 +1,8 @@
+fastmcp>=3.3
+httpx>=0.28
+numpy>=2.0
+scikit-learn>=1.8
+pyod>=3.5
+uvicorn>=0.47
+aiomqtt>=2.5
+prometheus_client>=0.20

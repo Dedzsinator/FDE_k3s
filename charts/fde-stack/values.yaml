@@ -1,0 +1,161 @@
+# FDE Stack v2 — default values (single-node, local-path storage)
+# All components Apache 2.0. No SaaS tier limits. No artificial node caps.
+# Override with values-multi-node.yaml for a multi-station HA cluster.
+
+global:
+  storageClass: ""     # "" → local-path; "longhorn" for multi-node HA
+
+# ─── Feature flags ────────────────────────────────────────────────────────────
+nats:
+  enabled: true
+clickhouse:
+  enabled: true
+apache-age:
+  enabled: true
+qdrant:
+  enabled: true
+ignition:
+  enabled: true
+litmusedge:
+  enabled: true
+dcsim:
+  enabled: true
+predmaint:
+  enabled: true
+pgadmin:
+  enabled: true
+maestrohub:
+  enabled: true
+heimdall:
+  enabled: true
+monitoring:
+  enabled: true
+loki:
+  enabled: true
+
+# ─── Ingress ──────────────────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx
+  baseDomain: "fde.local"
+  tls:
+    enabled: false
+    clusterIssuer: ""
+  # External vLLM endpoint — used by predmaint and any RAG pipeline calling back in
+  vllmEndpoint: ""   # e.g. http://192.168.1.50:8000/v1
+
+# ─── Per-chart value overrides ────────────────────────────────────────────────
+
+nats:
+  enabled: true
+  replicaCount: 3
+  nodePort:
+    mqtt: 31883
+  global:
+    storageClass: ""
+
+clickhouse:
+  enabled: true
+  global:
+    storageClass: ""
+  auth:
+    password: "CHANGEME"
+
+apache-age:
+  enabled: true
+  global:
+    storageClass: ""
+  auth:
+    password: "CHANGEME"
+
+qdrant:
+  enabled: true
+  global:
+    storageClass: ""
+
+ignition:
+  enabled: true
+  global:
+    storageClass: ""
+  config:
+    mqtt_broker_url: "tcp://fde-nats:1883"
+
+litmusedge:
+  enabled: true
+  global:
+    storageClass: ""
+  config:
+    mqtt_broker: "fde-nats.uns.svc.cluster.local"
+    mqtt_port: 1883
+
+dcsim:
+  enabled: true
+  mqtt:
+    host: "fde-nats"
+    port: 1883
+
+predmaint:
+  enabled: true
+  mqtt:
+    host: "fde-nats"
+    port: 1883
+  clickhouse:
+    url: "http://fde-clickhouse.uns.svc.cluster.local:8123"
+    database: "uns"
+  graph:
+    url: "postgresql://age:CHANGEME@fde-apache-age.uns.svc.cluster.local:5432/factory_graph"
+  vector:
+    url: "http://fde-qdrant.uns.svc.cluster.local:6333"
+
+pgadmin:
+  enabled: true
+  global:
+    storageClass: ""
+
+maestrohub:
+  enabled: true
+  global:
+    storageClass: ""
+
+heimdall:
+  enabled: true
+  global:
+    storageClass: ""
+
+# ─── Observability ────────────────────────────────────────────────────────────
+monitoring:
+  enabled: true
+  kube-prometheus-stack:
+    grafana:
+      adminPassword: "CHANGEME"
+      persistence:
+        storageClassName: ""
+      additionalDataSources:
+        - name: ClickHouse
+          type: grafana-clickhouse-datasource
+          access: proxy
+          url: http://fde-clickhouse.uns.svc.cluster.local:8123
+          jsonData:
+            defaultDatabase: uns
+            username: default
+          secureJsonData:
+            password: "CHANGEME"
+          isDefault: true
+        - name: Loki
+          type: loki
+          access: proxy
+          url: http://fde-loki.uns.svc.cluster.local:3100
+          isDefault: false
+    prometheus:
+      prometheusSpec:
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: ""
+
+loki:
+  enabled: true
+  loki-stack:
+    loki:
+      persistence:
+        storageClassName: ""

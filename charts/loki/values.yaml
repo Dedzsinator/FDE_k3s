@@ -1,0 +1,80 @@
+# Thin wrapper around grafana/loki-stack.
+# Loki receives logs; Promtail DaemonSet collects them from every node.
+
+loki-stack:
+
+  # ── Loki ─────────────────────────────────────────────────────────────────
+  loki:
+    enabled: true
+    isDefault: false    # Grafana datasource is configured in monitoring chart
+
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClassName: ""    # inherits global.storageClass
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    config:
+      # Keep logs for 30 days
+      limits_config:
+        retention_period: 720h
+        ingestion_rate_mb: 16
+        ingestion_burst_size_mb: 32
+        max_streams_per_user: 10000
+
+      # Structured metadata — labels automatically extracted from k8s pod annotations
+      schema_config:
+        configs:
+          - from: "2024-01-01"
+            store: boltdb-shipper
+            object_store: filesystem
+            schema: v11
+            index:
+              prefix: index_
+              period: 24h
+
+  # ── Promtail (log collector DaemonSet) ───────────────────────────────────
+  promtail:
+    enabled: true
+
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+    config:
+      # Enrich all log lines with k8s namespace, pod, container, and node labels
+      snippets:
+        extraScrapeConfigs: |
+          - job_name: kubernetes-pods-fde
+            kubernetes_sd_configs:
+              - role: pod
+                namespaces:
+                  names: [uns]
+            pipeline_stages:
+              - docker: {}
+              - labeldrop:
+                  - filename
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+                target_label: app
+              - source_labels: [__meta_kubernetes_namespace]
+                target_label: namespace
+              - source_labels: [__meta_kubernetes_pod_name]
+                target_label: pod
+              - source_labels: [__meta_kubernetes_pod_container_name]
+                target_label: container
+
+  # Disable bundled Grafana — we use the one from the monitoring chart
+  grafana:
+    enabled: false

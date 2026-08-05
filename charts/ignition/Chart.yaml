@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ignition
+description: Inductive Automation Ignition SCADA/HMI — standard edition
+type: application
+version: 0.1.0
+appVersion: "8.3.x"

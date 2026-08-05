@@ -1,0 +1,159 @@
+# essen-fde machine overrides
+# x86_64 · Ubuntu 26.04 · kubeadm v1.30 · 8 CPU · 15 GB RAM · 84 GB disk
+# Single-node: all nodeSelectors cleared, NATS replicaCount=1, resources reduced
+
+global:
+  storageClass: "local-path"
+
+ingress:
+  baseDomain: "fde-essen.local"
+  tls:
+    enabled: false
+
+# ── Single-node: clear all nodeSelectors ─────────────────────────────────────
+# (only one node, no tier separation)
+nats:
+  replicaCount: 1
+  nodeSelector: {}
+  storage:
+    jetstream: 5Gi
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+clickhouse:
+  nodeSelector: {}
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+  storage:
+    data: 20Gi
+    logs: 2Gi
+
+apache-age:
+  nodeSelector: {}
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+  storage:
+    data: 5Gi
+
+qdrant:
+  nodeSelector: {}
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+  storage:
+    data: 5Gi
+
+ignition:
+  nodeSelector: {}
+
+litmusedge:
+  nodeSelector: {}
+
+dcsim:
+  nodeSelector: {}
+
+predmaint:
+  nodeSelector: {}
+  mqtt:
+    host: "fde-nats"
+    port: 1883
+  clickhouse:
+    url: "http://fde-clickhouse.uns.svc.cluster.local:8123"
+    database: "uns"
+  graph:
+    url: "postgresql://age:CHANGEME@fde-apache-age.uns.svc.cluster.local:5432/factory_graph"
+  vector:
+    url: "http://fde-qdrant.uns.svc.cluster.local:6333"
+
+pgadmin:
+  nodeSelector: {}
+
+maestrohub:
+  nodeSelector: {}
+
+heimdall:
+  nodeSelector: {}
+
+# ── Observability — reduced retention for 15 GB machine ───────────────────────
+monitoring:
+  kube-prometheus-stack:
+    grafana:
+      adminPassword: "CHANGEME"
+      nodeSelector: {}
+      persistence:
+        storageClassName: "local-path"
+        size: 1Gi
+      additionalDataSources:
+        - name: ClickHouse
+          type: grafana-clickhouse-datasource
+          access: proxy
+          url: http://fde-clickhouse.uns.svc.cluster.local:8123
+          jsonData:
+            defaultDatabase: uns
+            username: default
+          secureJsonData:
+            password: "CHANGEME"
+          isDefault: true
+        - name: Loki
+          type: loki
+          access: proxy
+          url: http://fde-loki.uns.svc.cluster.local:3100
+          isDefault: false
+    prometheus:
+      prometheusSpec:
+        nodeSelector: {}
+        retention: 7d
+        retentionSize: "5GB"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: "local-path"
+              resources:
+                requests:
+                  storage: 8Gi
+    alertmanager:
+      alertmanagerSpec:
+        nodeSelector: {}
+        storage:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: "local-path"
+              resources:
+                requests:
+                  storage: 512Mi
+
+loki:
+  loki-stack:
+    loki:
+      nodeSelector: {}
+      persistence:
+        size: 5Gi
+        storageClassName: "local-path"
+    promtail:
+      nodeSelector: {}

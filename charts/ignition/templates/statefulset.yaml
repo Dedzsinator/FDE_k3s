@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "ignition.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "ignition.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "ignition.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "ignition.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "ignition.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: ignition
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ include "ignition.fullname" . }}-auth
+          env:
+            - name: TZ
+              value: {{ .Values.config.timezone | quote }}
+            - name: IGNITION_EDITION
+              value: "standard"
+            - name: ACCEPT_IGNITION_EULA
+              value: "Y"
+            - name: GATEWAY_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ignition.fullname" . }}-auth
+                  key: IGNITION_ADMIN_USERNAME
+            - name: GATEWAY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ignition.fullname" . }}-auth
+                  key: IGNITION_ADMIN_PASSWORD
+          ports:
+            - containerPort: {{ .Values.service.gateway.port }}
+              name: http
+            - containerPort: {{ .Values.service.gateway_ssl.port }}
+              name: https
+          readinessProbe:
+            httpGet:
+              path: /StatusPing
+              port: {{ .Values.service.gateway.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /StatusPing
+              port: {{ .Values.service.gateway.port }}
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            failureThreshold: 3
+          resources: {{- toYaml .Values.resources.ignition | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /usr/local/bin/ignition/data
+            - name: logs
+              mountPath: /usr/local/bin/ignition/logs
+            - name: backups
+              mountPath: /backup
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.data }}
+    - metadata:
+        name: logs
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.logs }}
+    - metadata:
+        name: backups
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.backups }}

@@ -1,0 +1,34 @@
+replicaCount: 1
+
+image:
+  repository: n8nio/n8n
+  tag: "1.44"
+  pullPolicy: IfNotPresent
+
+auth:
+  username: admin
+  password: "CHANGEME"
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "1Gi"
+
+storage:
+  data: 2Gi
+
+service:
+  port: 5678
+
+config:
+  timezone: "Europe/Budapest"
+
+global:
+  storageClass: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

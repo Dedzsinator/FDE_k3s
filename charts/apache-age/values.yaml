@@ -1,0 +1,38 @@
+replicaCount: 1
+
+image:
+  repository: apache/age
+  tag: "v1.5.0-pg16"
+  pullPolicy: IfNotPresent
+
+auth:
+  username: "age"
+  password: "CHANGEME"
+  database: "factory_graph"
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "2000m"
+    memory: "4Gi"
+
+storage:
+  data: 10Gi
+
+service:
+  port: 5432
+
+# Shared max_connections for predmaint and graph builder clients
+config:
+  maxConnections: 200
+  sharedBuffers: "1GB"
+  workMem: "64MB"
+
+global:
+  storageClass: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

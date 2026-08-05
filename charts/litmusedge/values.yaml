@@ -1,0 +1,48 @@
+replicaCount: 1
+
+image:
+  repository: litmusautomation/litmusedge
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+auth:
+  adminUsername: admin
+  adminPassword: "CHANGEME"
+
+resources:
+  litmusedge:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+
+storage:
+  data: 5Gi
+
+service:
+  ui:
+    port: 8080
+  mqtt:
+    port: 1883
+
+config:
+  # MonsterMQ broker this LitmusEdge instance publishes to
+  mqtt_broker: "monstermq.uns.svc.cluster.local"
+  mqtt_port: 1883
+
+global:
+  storageClass: ""
+
+# LitmusEdge talks to physical OT hardware — must run on OT-edge nodes
+nodeSelector:
+  uns.fde/tier: ot-edge
+
+tolerations: []
+
+affinity: {}
+
+# Required for hardware device access (serial, USB, etc.)
+securityContext:
+  privileged: true

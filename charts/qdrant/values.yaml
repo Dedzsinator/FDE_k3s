@@ -1,0 +1,38 @@
+replicaCount: 1   # increase to 3+ for distributed HA (no node limits in OSS)
+
+image:
+  repository: qdrant/qdrant
+  tag: "v1.9.2"
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "2000m"
+    memory: "4Gi"
+
+storage:
+  data: 10Gi
+
+service:
+  http:
+    port: 6333    # REST API + dashboard UI
+  grpc:
+    port: 6334    # gRPC (faster for bulk upserts from predmaint/Ollama pipeline)
+
+config:
+  # Named vector collections to create on startup:
+  # - "sensor_topics": embed MQTT topic names+descriptions (384-dim, sentence-transformers)
+  # - "equipment_profiles": embed equipment metadata from Apache Age graph nodes
+  # - "obsidian_notes": embed Obsidian vault pages (Karpathy LLM wiki + maintenance notes)
+  # - "anomaly_signatures": embed predmaint detected anomaly feature vectors
+  logLevel: "INFO"
+
+global:
+  storageClass: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

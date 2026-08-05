@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "clickhouse.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "clickhouse.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "clickhouse.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: {{ .Values.service.http.port }}
+      targetPort: {{ .Values.service.http.port }}
+      name: http
+    - port: {{ .Values.service.native.port }}
+      targetPort: {{ .Values.service.native.port }}
+      name: native

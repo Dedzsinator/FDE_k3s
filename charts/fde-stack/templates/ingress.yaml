@@ -1,0 +1,176 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-ingress
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "fde-stack.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    {{- if .Values.ingress.tls.enabled }}
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.tls.clusterIssuer | quote }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - "*.{{ .Values.ingress.baseDomain }}"
+      secretName: {{ .Release.Name }}-tls
+  {{- end }}
+  rules:
+    # Heimdall — landing dashboard
+    - host: "{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-heimdall
+                port:
+                  number: 80
+    {{- if .Values.monstermq.enabled }}
+    - host: "mqtt.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-monstermq
+                port:
+                  number: 4000
+    {{- end }}
+    {{- if .Values.ignition.enabled }}
+    - host: "ignition.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-ignition
+                port:
+                  number: 8088
+    {{- end }}
+    {{- if .Values.neo4j.enabled }}
+    - host: "neo4j.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-neo4j
+                port:
+                  number: 7474
+    {{- end }}
+    {{- if .Values.timebase.enabled }}
+    - host: "timebase.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-timebase-explorer
+                port:
+                  number: 8099
+    {{- end }}
+    {{- if .Values.pgadmin.enabled }}
+    - host: "pgadmin.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-pgadmin
+                port:
+                  number: 80
+    {{- end }}
+    {{- if .Values.maestrohub.enabled }}
+    - host: "maestro.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-maestrohub
+                port:
+                  number: 5678
+    {{- end }}
+    {{- if .Values.litmusedge.enabled }}
+    - host: "litmus.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-litmusedge
+                port:
+                  number: 8080
+    {{- end }}
+    {{- if .Values.predmaint.enabled }}
+    - host: "predmaint.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-predmaint
+                port:
+                  number: 8080
+    {{- end }}
+    {{- if .Values.qdrant.enabled }}
+    - host: "qdrant.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-qdrant
+                port:
+                  number: 6333
+    {{- end }}
+    {{- if .Values.clickhouse.enabled }}
+    - host: "clickhouse.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-clickhouse
+                port:
+                  number: 8123
+    {{- end }}
+    {{- if .Values.monitoring.enabled }}
+    - host: "grafana.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-monitoring-grafana
+                port:
+                  number: 80
+    - host: "alerts.{{ .Values.ingress.baseDomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-monitoring-kube-prometheus-st-alertmanager
+                port:
+                  number: 9093
+    {{- end }}
+{{- end }}

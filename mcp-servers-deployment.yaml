@@ -1,0 +1,282 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fde-mcp-servers
+  namespace: uns
+  labels:
+    app: fde-mcp-servers
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fde-mcp-servers
+  template:
+    metadata:
+      labels:
+        app: fde-mcp-servers
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      initContainers:
+      - name: pip-install
+        image: python:3.12-slim
+        command: [/bin/sh, -c]
+        args:
+        - pip install --no-cache-dir --target /site-packages
+            fastmcp==3.2.4
+            "qdrant-client>=1.7,<1.12"
+            fastembed
+            psycopg2-binary 2>&1
+        volumeMounts:
+        - name: site-packages
+          mountPath: /site-packages
+        - name: fastembed-cache
+          mountPath: /root/.cache
+        resources:
+          requests: {cpu: 500m, memory: 1Gi}
+          limits:   {cpu: 2000m, memory: 4Gi}
+      containers:
+      - name: ignition-mcp
+        image: python:3.12-slim
+        command: [python3, /app/ignition_server.py]
+        env:
+        - name: PYTHONPATH
+          value: /site-packages
+        ports:
+        - containerPort: 9104
+        volumeMounts:
+        - name: app
+          mountPath: /app
+        - name: site-packages
+          mountPath: /site-packages
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits:   {cpu: 500m, memory: 256Mi}
+        readinessProbe:
+          tcpSocket:
+            port: 9104
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+      - name: qdrant-mcp
+        image: python:3.12-slim
+        command: [python3, /app/qdrant_server.py]
+        env:
+        - name: PYTHONPATH
+          value: /site-packages
+        - name: QDRANT_URL
+          value: "http://127.0.0.1:32333"
+        - name: OBS_API_BASE
+          value: "http://192.168.100.100:27123"
+        - name: OBS_API_KEY
+          value: "a9148b82dd5e61801a167c230613c3d468da1ba27a922180f31ff5416c98c5ef"
+        ports:
+        - containerPort: 9103
+        volumeMounts:
+        - name: app
+          mountPath: /app
+        - name: site-packages
+          mountPath: /site-packages
+        - name: fastembed-cache
+          mountPath: /root/.cache
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits:   {cpu: 1000m, memory: 1Gi}
+        readinessProbe:
+          tcpSocket:
+            port: 9103
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+      - name: clickhouse-mcp
+        image: python:3.12-slim
+        command: [python3, /app/clickhouse_server.py]
+        env:
+        - name: PYTHONPATH
+          value: /site-packages
+        - name: CLICKHOUSE_HOST
+          value: "127.0.0.1"
+        - name: CLICKHOUSE_PORT
+          value: "32123"
+        - name: CLICKHOUSE_USER
+          value: "default"
+        - name: CLICKHOUSE_PASSWORD
+          value: "fde-clickhouse-secret"
+        ports:
+        - containerPort: 9105
+        volumeMounts:
+        - name: app
+          mountPath: /app
+        - name: site-packages
+          mountPath: /site-packages
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits:   {cpu: 500m, memory: 256Mi}
+        readinessProbe:
+          tcpSocket:
+            port: 9105
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+      - name: age-mcp
+        image: python:3.12-slim
+        command: [python3, /app/age_server.py]
+        env:
+        - name: PYTHONPATH
+          value: /site-packages
+        - name: AGE_HOST
+          value: "127.0.0.1"
+        - name: AGE_PORT
+          value: "32432"
+        - name: AGE_USER
+          value: "age"
+        - name: AGE_PASSWORD
+          value: "fde-age-secret"
+        - name: AGE_DB
+          value: "factory_graph"
+        ports:
+        - containerPort: 9106
+        volumeMounts:
+        - name: app
+          mountPath: /app
+        - name: site-packages
+          mountPath: /site-packages
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits:   {cpu: 500m, memory: 256Mi}
+        readinessProbe:
+          tcpSocket:
+            port: 9106
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+      - name: rag-mcp
+        image: python:3.12-slim
+        command: [python3, /app/rag_server.py]
+        env:
+        - name: PYTHONPATH
+          value: /site-packages
+        - name: QDRANT_URL
+          value: "http://127.0.0.1:32333"
+        - name: CH_URL
+          value: "http://127.0.0.1:32123"
+        - name: CH_USER
+          value: "default"
+        - name: CH_PASSWORD
+          value: "fde-clickhouse-secret"
+        - name: IGN_URL
+          value: "http://127.0.0.1:30088/data/mcp/fde"
+        - name: IGN_TOKEN
+          value: "MCP:Nc8_QIEZDNJcLFLbLzHCepeZWpuRNlZTCfd1XaYLWwE"
+        ports:
+        - containerPort: 9107
+        volumeMounts:
+        - name: app
+          mountPath: /app
+        - name: site-packages
+          mountPath: /site-packages
+        - name: fastembed-cache
+          mountPath: /root/.cache
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits:   {cpu: 1000m, memory: 1Gi}
+        readinessProbe:
+          tcpSocket:
+            port: 9107
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+      - name: obsidian-mcp
+        image: python:3.12-slim
+        command: [python3, /app/obsidian_server.py]
+        env:
+        - name: PYTHONPATH
+          value: /site-packages
+        - name: OBSIDIAN_URL
+          value: "http://192.168.100.100:27123"
+        - name: OBSIDIAN_API_KEY
+          value: "a9148b82dd5e61801a167c230613c3d468da1ba27a922180f31ff5416c98c5ef"
+        ports:
+        - containerPort: 9108
+        volumeMounts:
+        - name: app
+          mountPath: /app
+        - name: site-packages
+          mountPath: /site-packages
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits:   {cpu: 500m, memory: 256Mi}
+        readinessProbe:
+          tcpSocket:
+            port: 9108
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+      - name: embed-api
+        image: python:3.12-slim
+        command: [python3, /app/embed_server.py]
+        env:
+        - name: PYTHONPATH
+          value: /site-packages
+        ports:
+        - containerPort: 8001
+        volumeMounts:
+        - name: app
+          mountPath: /app
+        - name: site-packages
+          mountPath: /site-packages
+        - name: fastembed-cache
+          mountPath: /root/.cache
+        resources:
+          requests: {cpu: 100m, memory: 512Mi}
+          limits:   {cpu: 1000m, memory: 2Gi}
+        readinessProbe:
+          tcpSocket:
+            port: 8001
+          initialDelaySeconds: 60
+          periodSeconds: 10
+
+
+      - name: neo4j-mcp
+        image: python:3.12-slim
+        command: [python3, /app/neo4j_server.py]
+        env:
+        - name: PYTHONPATH
+          value: /site-packages
+        - name: NEO4J_URI
+          value: "bolt://127.0.0.1:32687"
+        - name: NEO4J_USER
+          value: "fde_mcp_graph"
+        - name: NEO4J_PASSWORD
+          value: "fde-mcp-graph-secret"
+        - name: OBSIDIAN_URL
+          value: "http://192.168.100.100:27123"
+        - name: OBSIDIAN_API_KEY
+          value: "a9148b82dd5e61801a167c230613c3d468da1ba27a922180f31ff5416c98c5ef"
+        ports:
+        - containerPort: 9109
+        volumeMounts:
+        - name: app
+          mountPath: /app
+        - name: site-packages
+          mountPath: /site-packages
+        resources:
+          requests: {cpu: 50m, memory: 128Mi}
+          limits:   {cpu: 500m, memory: 512Mi}
+        readinessProbe:
+          tcpSocket:
+            port: 9109
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+      volumes:
+      - name: app
+        hostPath:
+          path: /home/nandor/mcp-servers
+          type: Directory
+      - name: site-packages
+        emptyDir: {}
+      - name: fastembed-cache
+        hostPath:
+          path: /var/lib/docker/volumes/mcp-servers_fastembed_cache/_data
+          type: DirectoryOrCreate

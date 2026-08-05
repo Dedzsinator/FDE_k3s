@@ -1,0 +1,76 @@
+# Multi-node overrides — Longhorn HA storage, full stack, TLS
+# Usage: helm upgrade --install fde ./charts/fde-stack \
+#          -f charts/fde-stack/values.yaml \
+#          -f charts/fde-stack/values-multi-node.yaml
+
+global:
+  storageClass: "longhorn"
+
+ingress:
+  enabled: true
+  tls:
+    enabled: true
+    clusterIssuer: "letsencrypt-prod"
+
+# Scale-out collectors for high-throughput MQTT ingestion
+timebase:
+  collector:
+    replicaCount: 2
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+
+# Scale-out sim if running multiple factory scenarios in parallel
+dcsim:
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 4
+
+# Full observability — extended retention, bigger Loki for multi-node log volume
+monitoring:
+  kube-prometheus-stack:
+    prometheus:
+      prometheusSpec:
+        retention: 60d
+        retentionSize: "50GB"
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: "longhorn"
+              resources:
+                requests:
+                  storage: 50Gi
+    grafana:
+      persistence:
+        storageClassName: "longhorn"
+
+loki:
+  loki-stack:
+    loki:
+      persistence:
+        size: 30Gi
+        storageClassName: "longhorn"
+
+# Scale predmaint inference workers
+predmaint:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+
+# Larger resource ceilings for Neo4j on a dedicated stateful node
+neo4j:
+  resources:
+    neo4j:
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+      limits:
+        cpu: "4000m"
+        memory: "8Gi"
+  config:
+    heap_initial_size: 1G
+    heap_max_size: 4G
+    pagecache_size: 2G

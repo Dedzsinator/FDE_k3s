@@ -1,0 +1,32 @@
+# Single-node overrides — local-path storage, no HA, no LitmusEdge
+# Usage: helm upgrade --install fde ./charts/fde-stack -f charts/fde-stack/values-single-node.yaml
+
+global:
+  storageClass: ""    # rancher local-path provisioner
+
+litmusedge:
+  enabled: false      # needs OT-edge hardware; skip on dev/single node
+
+ignition:
+  enabled: false      # optional on dev setups; enable if running demo
+
+ingress:
+  enabled: true
+  tls:
+    enabled: false
+
+# Reduce retention on single-node to save disk
+monitoring:
+  enabled: true
+  kube-prometheus-stack:
+    prometheus:
+      prometheusSpec:
+        retention: 7d
+        retentionSize: "5GB"
+
+loki:
+  enabled: true
+  loki-stack:
+    loki:
+      persistence:
+        size: 5Gi

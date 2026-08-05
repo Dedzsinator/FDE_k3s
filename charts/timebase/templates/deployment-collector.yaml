@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "timebase.fullname" . }}-collector
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "timebase.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.collector.replicaCount }}
+  selector:
+    matchLabels: {{- include "timebase.collector.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "timebase.collector.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: collector
+          image: {{ .Values.collector.image.repository }}:{{ .Values.collector.image.tag }}
+          imagePullPolicy: {{ .Values.collector.image.pullPolicy }}
+          env:
+            - name: TIMEBASE_URL
+              value: "dxtick://{{ include "timebase.fullname" . }}-historian-svc.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.historian.port }}"
+            - name: MQTT_HOST
+              value: {{ .Values.mqtt.host | quote }}
+            - name: MQTT_PORT
+              value: {{ .Values.mqtt.port | quote }}
+            - name: MQTT_TOPIC
+              value: {{ .Values.mqtt.topicPrefix | quote }}
+          ports:
+            - containerPort: {{ .Values.service.collector.port }}
+              name: http
+          resources: {{- toYaml .Values.collector.resources | nindent 12 }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}

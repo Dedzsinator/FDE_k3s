@@ -1,0 +1,8 @@
+# Flat overrides for single-node essen-fde (direct chart install, not umbrella)
+global:
+  storageClass: local-path
+nodeSelector: {}
+tolerations: []
+affinity: {}
+storage:
+  data: 5Gi

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "maestrohub.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "maestrohub.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "maestrohub.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels: {{- include "maestrohub.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: maestrohub
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ include "maestrohub.fullname" . }}-auth
+          env:
+            - name: GENERIC_TIMEZONE
+              value: {{ .Values.config.timezone | quote }}
+            - name: N8N_BASIC_AUTH_ACTIVE
+              value: "true"
+            - name: N8N_HOST
+              value: "0.0.0.0"
+            - name: N8N_PORT
+              value: {{ .Values.service.port | quote }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 6
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /home/node/.n8n
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "maestrohub.fullname" . }}-data
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}

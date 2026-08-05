@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nats.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "nats.labels" . | nindent 4 }}
+data:
+  nats.conf: |
+    server_name: $POD_NAME
+    listen: 0.0.0.0:{{ .Values.service.client.port }}
+    http: 0.0.0.0:{{ .Values.service.monitor.port }}
+
+    # JetStream — persistent streaming for all sensor subjects
+    jetstream {
+      store_dir: /data/jetstream
+      max_memory_store: {{ .Values.config.jetstream.maxMemoryStore }}
+      max_file_store: {{ .Values.config.jetstream.maxFileStore }}
+    }
+
+    # MQTT gateway — Sparkplug B aware, QoS 0/1, retained, LWT
+    mqtt {
+      listen: 0.0.0.0:{{ .Values.service.mqtt.port }}
+      ack_wait: "1m"
+      max_ack_pending: 100
+    }
+
+    # Cluster — Raft-based, auto-discover peers via headless service DNS
+    cluster {
+      name: {{ .Values.config.clusterName | quote }}
+      listen: 0.0.0.0:{{ .Values.service.cluster.port }}
+      routes: [
+        {{- range $i := until (int .Values.replicaCount) }}
+        nats://{{ include "nats.fullname" $ }}-{{ $i }}.{{ include "nats.fullname" $ }}.{{ $.Release.Namespace }}.svc.cluster.local:{{ $.Values.service.cluster.port }}
+        {{- end }}
+      ]
+    }
+
+    # Lame-duck mode — graceful drain on pod termination
+    lame_duck_grace_period: "10s"
+    lame_duck_duration: "30s"

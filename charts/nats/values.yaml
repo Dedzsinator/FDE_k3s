@@ -1,0 +1,51 @@
+replicaCount: 3   # minimum for JetStream Raft quorum
+
+image:
+  repository: nats
+  tag: "2.10-alpine"
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "256Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+
+storage:
+  jetstream: 10Gi   # per-replica JetStream storage
+
+service:
+  client:
+    port: 4222      # NATS protocol (dc-sim, predmaint, collectors)
+  mqtt:
+    port: 1883      # MQTT 3.1.1 gateway (OT devices, Ignition, LitmusEdge)
+  monitor:
+    port: 8222      # HTTP monitoring + Prometheus /metrics endpoint
+  cluster:
+    port: 6222      # internal cluster routing
+
+nodePort:
+  mqtt: 31883       # raw MQTT for out-of-cluster OT devices
+
+config:
+  # JetStream — persistent subjects for sensor data archiving
+  jetstream:
+    maxMemoryStore: "512MB"
+    maxFileStore: "10GB"
+  # MQTT gateway — OT device MQTT sessions
+  mqtt:
+    enabled: true
+  # Cluster name — must be unique per cluster
+  clusterName: "fde-nats"
+  # Logging — keep minimal in production
+  debug: false
+  trace: false
+
+global:
+  storageClass: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

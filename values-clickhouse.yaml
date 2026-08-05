@@ -1,0 +1,19 @@
+# Flat overrides for single-node essen-fde (direct chart install, not umbrella)
+global:
+  storageClass: local-path
+nodeSelector: {}
+tolerations: []
+affinity: {}
+auth:
+  username: default
+  password: "CHANGEME"
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "2000m"
+    memory: "4Gi"
+storage:
+  data: 20Gi
+  logs: 2Gi

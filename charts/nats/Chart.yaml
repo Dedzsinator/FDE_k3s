@@ -1,0 +1,10 @@
+apiVersion: v2
+name: nats
+description: |
+  NATS JetStream — Apache 2.0 messaging backbone.
+  Replaces MonsterMQ/EMQX. Provides MQTT 3.1.1 gateway, persistent JetStream
+  subjects, and leaf-node federation for multi-site IIoT topologies.
+  ClickHouse subscribes directly via NATS table engine — no Telegraf needed.
+type: application
+version: 0.1.0
+appVersion: "2.10"

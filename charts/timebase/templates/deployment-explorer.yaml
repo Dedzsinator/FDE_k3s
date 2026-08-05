@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "timebase.fullname" . }}-explorer
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "timebase.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.explorer.replicaCount }}
+  selector:
+    matchLabels: {{- include "timebase.explorer.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "timebase.explorer.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: explorer
+          image: {{ .Values.explorer.image.repository }}:{{ .Values.explorer.image.tag }}
+          imagePullPolicy: {{ .Values.explorer.image.pullPolicy }}
+          env:
+            - name: TIMEBASE_URL
+              value: "dxtick://{{ include "timebase.fullname" . }}-historian-svc.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.historian.port }}"
+          ports:
+            - containerPort: {{ .Values.service.explorer.port }}
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.service.explorer.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          resources: {{- toYaml .Values.explorer.resources | nindent 12 }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}

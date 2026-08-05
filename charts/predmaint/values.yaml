@@ -1,0 +1,50 @@
+replicaCount: 1
+
+image:
+  repository: localhost:5000/predmaint
+  tag: "latest"
+  pullPolicy: Always
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+
+service:
+  port: 5100
+  metricsPort: 9090
+
+env:
+  MQTT_BROKER: "fde-emqx-svc.uns.svc.cluster.local"
+  MQTT_PORT: "1883"
+  MQTT_ALARM_ENABLED: "true"
+  MQTT_ALARM_QOS: "1"
+  ANOMALY_CONTAMINATION: "0.05"
+  UNS_GROUP: "dc"
+  UNS_EDGE_NODE: "blans"
+  RUL_CRITICAL_HOURS: "24"
+  RUL_WARNING_HOURS: "72"
+  METRICS_PORT: "9090"
+  CLICKHOUSE_URL: "http://fde-clickhouse-clickhouse.uns.svc.cluster.local:8123"
+  CLICKHOUSE_USER: "default"
+  CLICKHOUSE_PASSWORD: "CHANGEME"
+  SCAN_INTERVAL_S: "300"
+  SCAN_LOOKBACK_H: "24.0"
+  SCAN_ACTIVE_H: "1.0"
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+
+ingress:
+  enabled: true
+  className: nginx
+  host: "mcp.fde-essen.local"
+  path: "/predmaint"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

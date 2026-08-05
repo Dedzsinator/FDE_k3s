@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "monstermq.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "monstermq.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "monstermq.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "monstermq.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "monstermq.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      initContainers:
+        - name: wait-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - until nc -z monstermq-postgres.{{ .Release.Namespace }}.svc.cluster.local 5432; do echo waiting for postgres; sleep 2; done
+      containers:
+        - name: monstermq
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: JAVA_OPTS
+              value: "-Xmx512m"
+          ports:
+            - containerPort: {{ .Values.service.mqtt.port }}
+              name: mqtt
+            - containerPort: {{ .Values.service.mqtts.port }}
+              name: mqtts
+            - containerPort: {{ .Values.service.ws.port }}
+              name: ws
+            - containerPort: {{ .Values.service.wss.port }}
+              name: wss
+            - containerPort: {{ .Values.service.graphql.port }}
+              name: graphql
+            - containerPort: {{ .Values.service.mcp.port }}
+              name: mcp
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.service.graphql.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.service.graphql.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 3
+          resources: {{- toYaml .Values.resources.monstermq | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+            - name: log
+              mountPath: /app/log
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "monstermq.fullname" . }}-config
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: log
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.log }}

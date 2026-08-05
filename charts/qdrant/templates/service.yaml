@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "qdrant.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "qdrant.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "qdrant.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: {{ .Values.service.http.port }}
+      targetPort: {{ .Values.service.http.port }}
+      name: http
+    - port: {{ .Values.service.grpc.port }}
+      targetPort: {{ .Values.service.grpc.port }}
+      name: grpc

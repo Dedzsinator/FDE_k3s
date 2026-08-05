@@ -1,0 +1,131 @@
+# Thin wrapper around kube-prometheus-stack.
+# All values under kube-prometheus-stack: are passed through to the upstream chart.
+
+kube-prometheus-stack:
+
+  # ── Grafana ──────────────────────────────────────────────────────────────
+  grafana:
+    enabled: true
+    adminUser: admin
+    adminPassword: "CHANGEME"
+
+    persistence:
+      enabled: true
+      size: 2Gi
+      storageClassName: ""    # inherits global.storageClass
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    # Pre-wired datasources — no manual setup needed after deploy
+    additionalDataSources:
+      # Time-series sensor data (update URL when TimeBase → InfluxDB 3 migration completes)
+      - name: TimeBase
+        type: influxdb
+        access: proxy
+        url: http://fde-timebase-historian-svc.uns.svc.cluster.local:8011
+        jsonData:
+          version: Flux
+          organization: fde
+          defaultBucket: uns
+        isDefault: false
+
+      # Centralised logs via Loki
+      - name: Loki
+        type: loki
+        access: proxy
+        # Service name: <release>-loki.<namespace> — adjust if release name differs from "fde"
+        url: http://fde-loki.uns.svc.cluster.local:3100
+        jsonData:
+          maxLines: 1000
+        isDefault: false
+
+    # Default dashboards shipped with kube-prometheus-stack
+    defaultDashboardsEnabled: true
+    defaultDashboardsTimezone: "Europe/Budapest"
+
+    grafana.ini:
+      server:
+        root_url: "%(protocol)s://%(domain)s/grafana/"
+        serve_from_sub_path: true
+      analytics:
+        check_for_updates: false
+
+  # ── Prometheus ───────────────────────────────────────────────────────────
+  prometheus:
+    prometheusSpec:
+      retention: 30d
+      retentionSize: "20GB"
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            accessModes: ["ReadWriteOnce"]
+            storageClassName: ""    # inherits global.storageClass
+            resources:
+              requests:
+                storage: 20Gi
+
+      # Scrape all ServiceMonitors in the uns namespace (EMQX, predmaint, etc.)
+      serviceMonitorSelectorNilUsesHelmValues: false
+      serviceMonitorSelector: {}
+      serviceMonitorNamespaceSelector: {}
+
+  # ── AlertManager ─────────────────────────────────────────────────────────
+  alertmanager:
+    enabled: true
+    alertmanagerSpec:
+      resources:
+        requests:
+          cpu: 25m
+          memory: 64Mi
+        limits:
+          cpu: 100m
+          memory: 128Mi
+      storage:
+        volumeClaimTemplate:
+          spec:
+            accessModes: ["ReadWriteOnce"]
+            storageClassName: ""
+            resources:
+              requests:
+                storage: 1Gi
+
+  # ── Node Exporter ─────────────────────────────────────────────────────────
+  nodeExporter:
+    enabled: true
+
+  # ── kube-state-metrics ────────────────────────────────────────────────────
+  kubeStateMetrics:
+    enabled: true
+
+  # ── Default rules ─────────────────────────────────────────────────────────
+  defaultRules:
+    create: true
+    rules:
+      alertmanager: true
+      etcd: false         # k3s uses embedded etcd, skip standard etcd rules
+      kubeProxy: false    # k3s kube-proxy metrics path differs
+      kubernetesApps: true
+      kubernetesResources: true
+      kubernetesStorage: true
+      node: true
+
+  # Disable components already provided by k3s
+  kubeEtcd:
+    enabled: false
+  kubeControllerManager:
+    enabled: false
+  kubeScheduler:
+    enabled: false

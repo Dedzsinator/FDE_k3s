@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "maestrohub.fullname" . }}-data
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "maestrohub.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.data }}

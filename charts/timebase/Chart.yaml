@@ -1,0 +1,6 @@
+apiVersion: v2
+name: timebase
+description: TimeBase historian, MQTT collector, and explorer UI
+type: application
+version: 0.1.0
+appVersion: "latest"

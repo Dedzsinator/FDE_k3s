@@ -1,0 +1,13 @@
+# Flat overrides for single-node essen-fde (direct chart install, not umbrella)
+global:
+  storageClass: local-path
+nodeSelector: {}
+tolerations: []
+affinity: {}
+image:
+  repository: apache/age
+  tag: "PG16"
+auth:
+  username: age
+  password: "CHANGEME"
+  database: factory_graph

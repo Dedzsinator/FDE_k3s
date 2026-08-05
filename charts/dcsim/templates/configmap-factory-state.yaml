@@ -1,0 +1,34 @@
+{{- if .Values.scenario.factoryStateEnabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dcsim.fullname" . }}-factory-state
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "dcsim.labels" . | nindent 4 }}
+  annotations:
+    # Edit this ConfigMap and kubectl apply — dcsim hot-reloads within 60 ticks (no restart needed)
+    uns.fde/hot-reload: "true"
+data:
+  factory_state.yaml: |
+    version: 1
+    # Set mode: healthy on any station to lock it in healthy state (no degradation).
+    # Set mode: failed to immediately apply full failure offsets.
+    # Remove a station entry entirely to use raw generator values.
+    stations:
+      - cell: stun-co2-1
+        degradation:
+          start_date: "2026-03-01"
+          trajectory: linear    # linear | logarithmic | exponential | weibull
+          total_days: 180
+        tags:
+          - leaf: co2_pct
+            healthy_value: 90.0
+            failure_value: 82.0
+            noise_multiplier: 4.0
+          - leaf: temperature
+            healthy_value: 22.0
+            failure_value: 28.5
+            noise_multiplier: 2.5
+      - cell: autofom-1
+        mode: healthy
+{{- end }}

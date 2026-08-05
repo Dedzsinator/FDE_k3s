@@ -1,0 +1,42 @@
+replicaCount: 1
+
+image:
+  repository: fde/dcsim
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+mqtt:
+  host: "monstermq"
+  port: 1883
+  username: ""
+  password: ""
+
+scenario:
+  name: "dc-blans"
+  # factory_state.yaml is projected from this ConfigMap; edit it to change degradation state
+  # without rebuilding the image (hot-reload every 60 ticks)
+  factoryStateEnabled: true
+
+service:
+  port: 8080
+
+global:
+  storageClass: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

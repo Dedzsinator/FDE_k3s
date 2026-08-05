@@ -1,0 +1,6 @@
+apiVersion: v2
+name: predmaint
+description: Predictive maintenance ML inference service — outlier detection on MQTT sensor streams
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

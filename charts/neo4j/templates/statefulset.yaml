@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "neo4j.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "neo4j.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "neo4j.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "neo4j.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "neo4j.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: neo4j
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ include "neo4j.fullname" . }}-auth
+          env:
+            - name: NEO4J_server_memory_heap_initial__size
+              value: {{ .Values.config.heap_initial_size | quote }}
+            - name: NEO4J_server_memory_heap_max__size
+              value: {{ .Values.config.heap_max_size | quote }}
+            - name: NEO4J_server_memory_pagecache_size
+              value: {{ .Values.config.pagecache_size | quote }}
+            - name: NEO4J_dbms_security_procedures_unrestricted
+              value: "apoc.*,gds.*"
+          ports:
+            - containerPort: {{ .Values.service.bolt.port }}
+              name: bolt
+            - containerPort: {{ .Values.service.http.port }}
+              name: http
+            - containerPort: {{ .Values.service.https.port }}
+              name: https
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.service.http.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.service.http.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 3
+          resources: {{- toYaml .Values.resources.neo4j | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: logs
+              mountPath: /logs
+            - name: import
+              mountPath: /import
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.data }}
+    - metadata:
+        name: logs
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.logs }}
+    - metadata:
+        name: import
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.import }}

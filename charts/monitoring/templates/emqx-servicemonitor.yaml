@@ -1,0 +1,23 @@
+# ServiceMonitor for EMQX 5 — tells Prometheus to scrape EMQX broker metrics.
+# EMQX exposes Prometheus metrics at :18083/api/v5/prometheus/stats (no auth needed by default).
+# This resource is created by the monitoring chart so Prometheus discovers EMQX automatically.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: emqx
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: emqx
+    release: {{ .Release.Name }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - uns
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: emqx
+  endpoints:
+    - port: dashboard
+      path: /api/v5/prometheus/stats
+      interval: 30s
+      scheme: http

@@ -1,0 +1,11 @@
+apiVersion: v2
+name: qdrant
+description: |
+  Qdrant — Apache 2.0 vector database.
+  Stores embeddings for: MQTT topic semantics, equipment descriptions (Apache Age nodes),
+  Obsidian LLM-wiki notes, and sensor anomaly signatures.
+  Enables semantic similarity search and RAG (Retrieval-Augmented Generation) over
+  factory data using local LLMs via Ollama.
+type: application
+version: 0.1.0
+appVersion: "1.9"

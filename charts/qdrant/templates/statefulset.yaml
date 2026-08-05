@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "qdrant.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "qdrant.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "qdrant.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "qdrant.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "qdrant.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: qdrant
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: QDRANT__LOG_LEVEL
+              value: {{ .Values.config.logLevel | quote }}
+          ports:
+            - containerPort: {{ .Values.service.http.port }}
+              name: http
+            - containerPort: {{ .Values.service.grpc.port }}
+              name: grpc
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ .Values.service.http.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: {{ .Values.service.http.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 3
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /qdrant/storage
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.data }}

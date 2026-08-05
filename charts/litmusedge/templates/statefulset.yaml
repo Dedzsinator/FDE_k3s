@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "litmusedge.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "litmusedge.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "litmusedge.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "litmusedge.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "litmusedge.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: litmusedge
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          envFrom:
+            - secretRef:
+                name: {{ include "litmusedge.fullname" . }}-auth
+          ports:
+            - containerPort: {{ .Values.service.ui.port }}
+              name: ui
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.service.ui.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.service.ui.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 3
+          resources: {{- toYaml .Values.resources.litmusedge | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.data }}

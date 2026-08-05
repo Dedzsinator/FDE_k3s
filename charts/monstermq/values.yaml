@@ -1,0 +1,61 @@
+replicaCount: 1
+
+image:
+  repository: rocworks/monstermq
+  tag: latest
+  pullPolicy: Always
+
+postgres:
+  image:
+    repository: postgres
+    tag: "16-alpine"
+  db: monster
+  user: system
+  password: CHANGEME
+  storage: 20Gi
+
+storage:
+  log: 2Gi
+
+resources:
+  monstermq:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 1Gi
+  postgres:
+    requests:
+      cpu: 200m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+service:
+  mqtt:    { port: 1883 }
+  mqtts:   { port: 8883 }
+  ws:      { port: 9000 }
+  wss:     { port: 9001 }
+  graphql: { port: 4000 }
+  mcp:     { port: 3000 }
+
+config:
+  logging:
+    mqtt: true
+    memoryEntries: 1000
+  archiveAll: true
+  userManagement: true
+
+# mqtt nodePort for out-of-cluster clients (e.g. LitmusEdge, dcsim on other nodes)
+nodePort:
+  mqtt: 31883
+  ws:   31900
+
+global:
+  storageClass: local-path
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

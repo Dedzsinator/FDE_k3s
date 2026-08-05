@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "neo4j.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "neo4j.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "neo4j.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: {{ .Values.service.bolt.port }}
+      targetPort: {{ .Values.service.bolt.port }}
+      name: bolt
+    - port: {{ .Values.service.http.port }}
+      targetPort: {{ .Values.service.http.port }}
+      name: http
+    - port: {{ .Values.service.https.port }}
+      targetPort: {{ .Values.service.https.port }}
+      name: https

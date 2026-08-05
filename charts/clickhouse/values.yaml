@@ -1,0 +1,47 @@
+replicaCount: 1   # increase for sharding; each shard also supports replicas
+
+image:
+  repository: clickhouse/clickhouse-server
+  tag: "24.3-alpine"
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+  limits:
+    cpu: "4000m"
+    memory: "8Gi"
+
+storage:
+  data: 50Gi
+  logs: 5Gi
+
+service:
+  http:
+    port: 8123    # REST / Grafana datasource
+  native:
+    port: 9000    # ClickHouse native protocol (faster bulk inserts)
+  interserver:
+    port: 9009    # replication between shards
+
+config:
+  # NATS subjects to subscribe and archive into sensor_data table
+  # Uses the NATS table engine — no Telegraf or external pipeline needed
+  natsSubjects:
+    - subject: ">"          # subscribe to all NATS subjects (equivalent to MQTT #)
+      table: "uns.sensor_raw"
+  maxMemoryUsage: "6000000000"   # 6 GB — tune to 60-70% of limit
+  timezone: "Europe/Budapest"
+
+# Credentials
+auth:
+  username: "default"
+  password: "CHANGEME"
+
+global:
+  storageClass: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

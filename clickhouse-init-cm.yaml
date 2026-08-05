@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fde-clickhouse-clickhouse-config
+  namespace: uns
+data:
+  override.xml: |
+    <clickhouse>
+      <timezone>Europe/Budapest</timezone>
+      <max_memory_usage>4000000000</max_memory_usage>
+      <logger>
+        <level>warning</level>
+      </logger>
+    </clickhouse>
+  init.sql: |
+    CREATE DATABASE IF NOT EXISTS uns;
+
+    CREATE TABLE IF NOT EXISTS uns.sensor_raw (
+        ts        DateTime64(3, 'UTC'),
+        topic     LowCardinality(String),
+        cell      LowCardinality(String),
+        tag       LowCardinality(String),
+        value_num Nullable(Float64),
+        value_str Nullable(String)
+    )
+    ENGINE = MergeTree()
+    PARTITION BY toYYYYMMDD(ts)
+    ORDER BY (cell, tag, ts)
+    TTL ts + INTERVAL 2 YEAR;
+
+    CREATE TABLE IF NOT EXISTS uns.sensor_hourly (
+        ts_hour   DateTime,
+        cell      LowCardinality(String),
+        tag       LowCardinality(String),
+        avg_val   Float64,
+        min_val   Float64,
+        max_val   Float64,
+        cnt       UInt64
+    )
+    ENGINE = SummingMergeTree()
+    PARTITION BY toYYYYMM(ts_hour)
+    ORDER BY (cell, tag, ts_hour);
+
+    CREATE MATERIALIZED VIEW IF NOT EXISTS uns.sensor_to_hourly
+    TO uns.sensor_hourly
+    AS SELECT
+        toStartOfHour(ts) AS ts_hour,
+        cell, tag,
+        avg(value_num) AS avg_val,
+        min(value_num) AS min_val,
+        max(value_num) AS max_val,
+        count()        AS cnt
+    FROM uns.sensor_raw GROUP BY ts_hour, cell, tag;

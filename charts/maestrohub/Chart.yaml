@@ -1,0 +1,6 @@
+apiVersion: v2
+name: maestrohub
+description: MaestroHub — workflow orchestration and integration hub (n8n-compatible)
+type: application
+version: 0.1.0
+appVersion: "1.0"

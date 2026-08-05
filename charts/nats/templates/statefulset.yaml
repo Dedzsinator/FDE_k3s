@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "nats.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "nats.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "nats.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "nats.selectorLabels" . | nindent 6 }}
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels: {{- include "nats.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      # Graceful shutdown: send lame-duck signal, wait for drain
+      terminationGracePeriodSeconds: 60
+      shareProcessNamespace: true
+      containers:
+        - name: nats
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          command:
+            - nats-server
+            - --config
+            - /etc/nats/nats.conf
+          ports:
+            - containerPort: {{ .Values.service.client.port }}
+              name: client
+            - containerPort: {{ .Values.service.mqtt.port }}
+              name: mqtt
+            - containerPort: {{ .Values.service.monitor.port }}
+              name: monitor
+            - containerPort: {{ .Values.service.cluster.port }}
+              name: cluster
+          readinessProbe:
+            httpGet:
+              path: /healthz?js-enabled-only=true
+              port: {{ .Values.service.monitor.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.monitor.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 3
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nats
+            - name: jetstream
+              mountPath: /data/jetstream
+        # Reloader sidecar — hot-reloads nats.conf on ConfigMap changes
+        - name: reloader
+          image: natsio/nats-server-config-reloader:latest
+          command:
+            - nats-server-config-reloader
+            - -pid
+            - /var/run/nats/nats.pid
+            - -config
+            - /etc/nats/nats.conf
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nats
+            - name: pid
+              mountPath: /var/run/nats
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "nats.fullname" . }}-config
+        - name: pid
+          emptyDir: {}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: jetstream
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.jetstream }}

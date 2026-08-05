@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dcsim.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "dcsim.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "dcsim.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "dcsim.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Rolling restart when factory_state ConfigMap changes
+        checksum/factory-state: {{ include (print $.Template.BasePath "/configmap-factory-state.yaml") . | sha256sum }}
+    spec:
+      containers:
+        - name: dcsim
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: MQTT_HOST
+              value: {{ .Values.mqtt.host | quote }}
+            - name: MQTT_PORT
+              value: {{ .Values.mqtt.port | quote }}
+            {{- if .Values.mqtt.username }}
+            - name: MQTT_USERNAME
+              value: {{ .Values.mqtt.username | quote }}
+            - name: MQTT_PASSWORD
+              value: {{ .Values.mqtt.password | quote }}
+            {{- end }}
+            - name: DCSIM_SCENARIO
+              value: {{ .Values.scenario.name | quote }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.scenario.factoryStateEnabled }}
+          volumeMounts:
+            - name: factory-state
+              mountPath: /app/scenarios/{{ .Values.scenario.name }}/factory_state.yaml
+              subPath: factory_state.yaml
+          {{- end }}
+      {{- if .Values.scenario.factoryStateEnabled }}
+      volumes:
+        - name: factory-state
+          configMap:
+            name: {{ include "dcsim.fullname" . }}-factory-state
+      {{- end }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}

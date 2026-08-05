@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "monstermq.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "monstermq.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "monstermq.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: 1883
+      targetPort: {{ .Values.service.mqtt.port }}
+      name: mqtt
+    - port: 8883
+      targetPort: {{ .Values.service.mqtts.port }}
+      name: mqtts
+    - port: 9000
+      targetPort: {{ .Values.service.ws.port }}
+      name: ws
+    - port: 9001
+      targetPort: {{ .Values.service.wss.port }}
+      name: wss
+    - port: 4000
+      targetPort: {{ .Values.service.graphql.port }}
+      name: graphql
+    - port: 3000
+      targetPort: {{ .Values.service.mcp.port }}
+      name: mcp
+---
+# NodePort for raw MQTT — out-of-cluster devices (LitmusEdge, external sims) connect here
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "monstermq.fullname" . }}-ext
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "monstermq.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector: {{- include "monstermq.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: 1883
+      targetPort: {{ .Values.service.mqtt.port }}
+      nodePort: {{ .Values.nodePort.mqtt }}
+      name: mqtt
+    - port: 9000
+      targetPort: {{ .Values.service.ws.port }}
+      nodePort: {{ .Values.nodePort.ws }}
+      name: ws

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: monstermq-postgres
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "monstermq.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector: {{- include "monstermq.postgres.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgres

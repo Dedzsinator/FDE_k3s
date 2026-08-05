@@ -1,0 +1,14 @@
+apiVersion: v2
+name: loki
+description: |
+  Centralised log aggregation — Loki (storage) + Promtail DaemonSet (collection).
+  Promtail runs on every node, tails /var/log/containers/*.log, and ships to Loki.
+  Grafana (from the monitoring chart) is pre-wired with a Loki datasource.
+type: application
+version: 0.1.0
+appVersion: "2.9"
+
+dependencies:
+  - name: loki-stack
+    version: "~2.10"
+    repository: "https://grafana.github.io/helm-charts"

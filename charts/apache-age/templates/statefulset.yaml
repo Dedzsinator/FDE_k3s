@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "apache-age.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "apache-age.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "apache-age.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "apache-age.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "apache-age.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: apache-age
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.auth.username | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.auth.password | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.auth.database | quote }}
+            - name: POSTGRES_INITDB_ARGS
+              value: "--encoding=UTF8 --locale=C"
+          args:
+            - postgres
+            - -c
+            - shared_preload_libraries=age
+            - -c
+            - max_connections={{ .Values.config.maxConnections }}
+            - -c
+            - shared_buffers={{ .Values.config.sharedBuffers }}
+            - -c
+            - work_mem={{ .Values.config.workMem }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: postgres
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.auth.username | quote }}, "-d", {{ .Values.auth.database | quote }}]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.auth.username | quote }}, "-d", {{ .Values.auth.database | quote }}]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: init
+          configMap:
+            name: {{ include "apache-age.fullname" . }}-init
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.data }}

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: monstermq
+description: MonsterMQ MQTT broker with PostgreSQL persistence, GraphQL API and MCP
+type: application
+version: 0.1.0
+appVersion: "latest"

@@ -1,0 +1,44 @@
+replicaCount: 1
+
+image:
+  repository: neo4j
+  tag: "5.18-community"
+  pullPolicy: IfNotPresent
+
+auth:
+  username: neo4j
+  password: "CHANGEME"
+
+resources:
+  neo4j:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "2Gi"
+
+storage:
+  data: 10Gi
+  logs: 2Gi
+  import: 1Gi
+
+service:
+  bolt:
+    port: 7687
+  http:
+    port: 7474
+  https:
+    port: 7473
+
+config:
+  heap_initial_size: 512m
+  heap_max_size: 1G
+  pagecache_size: 512m
+
+global:
+  storageClass: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

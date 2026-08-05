@@ -1,0 +1,6 @@
+apiVersion: v2
+name: litmusedge
+description: LitmusEdge IIoT gateway — OPC-UA, BACnet, EtherNet/IP edge connectivity
+type: application
+version: 0.1.0
+appVersion: "4.0.12"

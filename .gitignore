@@ -1,0 +1,24 @@
+# Helm chart tarballs (pulled dependencies — regenerate with helm dep update)
+charts/*/charts/*.tgz
+charts/loki/Chart.lock
+
+# Runtime / scratch files
+*.bak
+*.log
+__pycache__/
+*.pyc
+.DS_Store
+
+# Local test + patch scripts (session artefacts, not part of the stack)
+/patch_v130.py
+/test_v130.py
+/deep_test.py
+/recon.py
+/recon.out
+
+# Secrets file (never commit real secrets)
+.env
+secrets.yaml
+
+# Architecture HTML (generated artefact)
+architecture.html

@@ -1,0 +1,11 @@
+apiVersion: v2
+name: clickhouse
+description: |
+  ClickHouse — Apache 2.0 columnar analytics database.
+  Replaces InfluxDB 3 / TimeBase historian. Subscribes to NATS subjects via the
+  native NATS table engine and stores all sensor time-series. No Telegraf required.
+  Grafana official plugin, petabyte-scale horizontal sharding, built-in MCP server
+  (via clickhouse-mcp) for AI natural-language queries.
+type: application
+version: 0.1.0
+appVersion: "24.x"

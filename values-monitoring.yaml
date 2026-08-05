@@ -1,0 +1,96 @@
+kube-prometheus-stack:
+  grafana:
+    enabled: true
+    adminUser: admin
+    adminPassword: "CHANGEME"
+
+    persistence:
+      enabled: true
+      size: 1Gi
+      storageClassName: "local-path"
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    grafana.ini:
+      server:
+        domain: grafana.fde-essen.local
+        root_url: "http://grafana.fde-essen.local:8080/"
+        serve_from_sub_path: false
+
+    additionalDataSources:
+      - name: ClickHouse
+        type: grafana-clickhouse-datasource
+        access: proxy
+        url: http://fde-clickhouse-clickhouse.uns.svc.cluster.local:8123
+        jsonData:
+          defaultDatabase: uns
+          username: default
+        secureJsonData:
+          password: "CHANGEME"
+        isDefault: true
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://fde-loki-loki.uns.svc.cluster.local:3100
+        isDefault: false
+
+    defaultDashboardsEnabled: true
+    defaultDashboardsTimezone: "Europe/Budapest"
+
+  prometheus:
+    prometheusSpec:
+      retention: 7d
+      retentionSize: "5GB"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: "local-path"
+            resources:
+              requests:
+                storage: 8Gi
+      serviceMonitorSelectorNilUsesHelmValues: false
+      serviceMonitorSelector: {}
+      serviceMonitorNamespaceSelector: {}
+
+  alertmanager:
+    enabled: true
+    alertmanagerSpec:
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: "local-path"
+            resources:
+              requests:
+                storage: 512Mi
+
+  nodeExporter:
+    enabled: true
+
+  kubeStateMetrics:
+    enabled: true
+
+  defaultRules:
+    create: true
+    rules:
+      etcd: false
+      kubeProxy: false
+
+  kubeEtcd:
+    enabled: false
+  kubeControllerManager:
+    enabled: false
+  kubeScheduler:
+    enabled: false

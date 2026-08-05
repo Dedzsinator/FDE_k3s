@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "timebase.fullname" . }}-historian
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "timebase.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "timebase.fullname" . }}-historian
+  replicas: 1
+  selector:
+    matchLabels: {{- include "timebase.historian.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "timebase.historian.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: historian
+          image: {{ .Values.historian.image.repository }}:{{ .Values.historian.image.tag }}
+          imagePullPolicy: {{ .Values.historian.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.historian.port }}
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /api/v0/ping
+              port: {{ .Values.service.historian.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v0/ping
+              port: {{ .Values.service.historian.port }}
+            initialDelaySeconds: 45
+            periodSeconds: 20
+            failureThreshold: 3
+          resources: {{- toYaml .Values.historian.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /timebase-home
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.historian.storage.data }}

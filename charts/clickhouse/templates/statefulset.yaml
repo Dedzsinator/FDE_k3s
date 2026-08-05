@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "clickhouse.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "clickhouse.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "clickhouse.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "clickhouse.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "clickhouse.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      initContainers:
+        - name: wait-nats
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z fde-nats-nats.{{ .Release.Namespace }}.svc.cluster.local 4222; do echo waiting for NATS; sleep 3; done"]
+      containers:
+        - name: clickhouse
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: CLICKHOUSE_USER
+              value: {{ .Values.auth.username | quote }}
+            - name: CLICKHOUSE_PASSWORD
+              value: {{ .Values.auth.password | quote }}
+            - name: CLICKHOUSE_DB
+              value: "uns"
+          ports:
+            - containerPort: {{ .Values.service.http.port }}
+              name: http
+            - containerPort: {{ .Values.service.native.port }}
+              name: native
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: {{ .Values.service.http.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: {{ .Values.service.http.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 3
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clickhouse
+            - name: logs
+              mountPath: /var/log/clickhouse-server
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d/override.xml
+              subPath: override.xml
+            - name: config
+              mountPath: /etc/clickhouse-server/users.d/users-override.xml
+              subPath: users-override.xml
+            - name: config
+              mountPath: /docker-entrypoint-initdb.d/init.sql
+              subPath: init.sql
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "clickhouse.fullname" . }}-config
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.data }}
+    - metadata:
+        name: logs
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.logs }}

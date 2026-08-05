@@ -1,0 +1,6 @@
+apiVersion: v2
+name: dcsim
+description: DC Blans factory/plant MQTT simulation engine with Weibull degradation model
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

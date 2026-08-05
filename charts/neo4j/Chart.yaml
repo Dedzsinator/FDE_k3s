@@ -1,0 +1,6 @@
+apiVersion: v2
+name: neo4j
+description: Neo4j Enterprise graph database — UNS genealogy and identity lineage
+type: application
+version: 0.1.0
+appVersion: "5.26-enterprise"

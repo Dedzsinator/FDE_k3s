@@ -1,0 +1,86 @@
+apiVersion: v2
+name: fde-stack
+description: |
+  FDE (Factory Digital Edge) — umbrella Helm chart.
+  Full IIoT / Unified Namespace stack — all Apache 2.0, no SaaS limits:
+    Messaging:    NATS JetStream (replaces MonsterMQ)
+    Time-series:  ClickHouse (replaces TimeBase/InfluxDB)
+    Graph DB:     Apache Age on PostgreSQL (replaces Neo4j/Memgraph)
+    Vector DB:    Qdrant (semantic search, RAG for external vLLM)
+    OT Edge:      Ignition SCADA + LitmusEdge
+    Simulation:   dc-sim (Weibull degradation, hot-reload)
+    AI/ML:        predmaint (outlier detection → maintenance dates)
+    Observability:Prometheus + Grafana + AlertManager + Loki + Promtail
+    Tooling:      pgAdmin, MaestroHub (n8n), Heimdall
+type: application
+version: 0.2.0
+appVersion: "2.0.0"
+
+dependencies:
+  # ── Core messaging (replaces MonsterMQ) ───────────────────────────────────
+  - name: nats
+    version: "0.1.0"
+    repository: "file://../nats"
+    condition: nats.enabled
+
+  # ── Time-series analytics (replaces TimeBase + InfluxDB) ──────────────────
+  - name: clickhouse
+    version: "0.1.0"
+    repository: "file://../clickhouse"
+    condition: clickhouse.enabled
+
+  # ── Graph database (replaces Neo4j / Memgraph) ────────────────────────────
+  - name: apache-age
+    version: "0.1.0"
+    repository: "file://../apache-age"
+    condition: apache-age.enabled
+
+  # ── Vector store for RAG with external vLLM ───────────────────────────────
+  - name: qdrant
+    version: "0.1.0"
+    repository: "file://../qdrant"
+    condition: qdrant.enabled
+
+  # ── OT layer ──────────────────────────────────────────────────────────────
+  - name: ignition
+    version: "0.1.0"
+    repository: "file://../ignition"
+    condition: ignition.enabled
+  - name: litmusedge
+    version: "0.1.0"
+    repository: "file://../litmusedge"
+    condition: litmusedge.enabled
+
+  # ── Simulation + prediction ───────────────────────────────────────────────
+  - name: dcsim
+    version: "0.1.0"
+    repository: "file://../dcsim"
+    condition: dcsim.enabled
+  - name: predmaint
+    version: "0.1.0"
+    repository: "file://../predmaint"
+    condition: predmaint.enabled
+
+  # ── Tooling ───────────────────────────────────────────────────────────────
+  - name: pgadmin
+    version: "0.1.0"
+    repository: "file://../pgadmin"
+    condition: pgadmin.enabled
+  - name: maestrohub
+    version: "0.1.0"
+    repository: "file://../maestrohub"
+    condition: maestrohub.enabled
+  - name: heimdall
+    version: "0.1.0"
+    repository: "file://../heimdall"
+    condition: heimdall.enabled
+
+  # ── Observability ─────────────────────────────────────────────────────────
+  - name: monitoring
+    version: "0.1.0"
+    repository: "file://../monitoring"
+    condition: monitoring.enabled
+  - name: loki
+    version: "0.1.0"
+    repository: "file://../loki"
+    condition: loki.enabled

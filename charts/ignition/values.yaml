@@ -1,0 +1,48 @@
+replicaCount: 1
+
+image:
+  repository: inductiveautomation/ignition
+  tag: "8.1.43"
+  pullPolicy: IfNotPresent
+
+auth:
+  adminUsername: admin
+  adminPassword: "CHANGEME"
+
+resources:
+  ignition:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "3Gi"
+
+storage:
+  data: 5Gi
+  logs: 2Gi
+  backups: 10Gi
+
+service:
+  gateway:
+    port: 8088
+  gateway_ssl:
+    port: 8043
+
+config:
+  timezone: "Europe/Budapest"
+  # MQTT Transmission module connection to MonsterMQ
+  mqtt_broker_url: "tcp://monstermq:1883"
+  mqtt_broker_username: ""
+  mqtt_broker_password: ""
+
+global:
+  storageClass: ""
+
+# Ignition needs privileged access to the OT network; pin to OT-edge nodes
+nodeSelector:
+  uns.fde/tier: ot-edge
+
+tolerations: []
+
+affinity: {}
