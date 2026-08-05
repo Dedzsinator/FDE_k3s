@@ -965,18 +965,19 @@ step "Pod status (ns=${NS})"
 printf "\n"
 kubectl get pods -n "${NS}" --no-headers 2>/dev/null | \
   awk '{
-    name=$1; ready=$2; status=$4
-    if (status=="Running")    printf "      \033[38;5;82m✔\033[0m  %-52s %s  (%s)\n", name, status, ready
-    else if (status~/^Compl/) printf "      \033[38;5;82m✔\033[0m  %-52s %s\n",       name, status
-    else                      printf "      \033[38;5;220m⚠\033[0m  %-52s %s\n",       name, status
+    name=$1; ready=$2; status=$3; restarts=$4
+    if (status=="Running")    printf "      \033[38;5;82m✔\033[0m  %-52s Running  (%s ready, %s restarts)\n", name, ready, restarts
+    else if (status~/^Compl/) printf "      \033[38;5;82m✔\033[0m  %-52s %s\n",        name, status
+    else                      printf "      \033[38;5;220m⚠\033[0m  %-52s %s\n",        name, status
   }' || true
 printf "\n"
 
 step "Helm releases"
 printf "\n"
-helm list -A --no-headers 2>/dev/null | \
-  awk '{
-    name=$1; ns=$2; status=$6
+helm list -A -o json 2>/dev/null | \
+  jq -r '.[] | [.name, .namespace, .status] | @tsv' 2>/dev/null | \
+  awk -F'\t' '{
+    name=$1; ns=$2; status=$3
     if (status=="deployed") printf "      \033[38;5;82m✔\033[0m  %-28s ns=%-14s %s\n", name, ns, status
     else                    printf "      \033[38;5;220m⚠\033[0m  %-28s ns=%-14s %s\n", name, ns, status
   }' || true
@@ -1011,6 +1012,7 @@ ok ".env written  →  ${FDE_ENV_FILE}"
 _hr() { printf "  ${D}%s${N}\n" "────────────────────────────────────────────────────────────"; }
 
 printf "\n"
+[[ -z "${NODE_IP:-}" ]] && NODE_IP="$(auto_detect_ip)"
 printf "${P}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${N}\n"
 printf "${W} FDE Platform deployed!  Node: %s${N}\n" "$NODE_IP"
 printf "${P}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${N}\n\n"
