@@ -34,7 +34,7 @@ show_banner() {
     '                  #****************#' \
     '                      ###**********#'
   # TIP — P→L colour transition mid-line
-  printf '%s%s\n' '                       #%%' "${L}##*****#"
+  printf '%s%s\n' '                       #%%' "${L}##*******##"
   # Bottom arm: exact mirror of top arm (lines 10→1), in L colour
   printf '%s\n' \
     '                      ###**********#' \
