@@ -623,7 +623,11 @@ _helm_up() {
   if [[ "$status" == "deployed" ]]; then
     skip "${release}"
   else
-    [[ -n "$status" ]] && { info "Removing previous '${status}' release: ${release}"; helm uninstall "${release}" -n "${NS}" >>"$LOG" 2>&1 || true; }
+    if [[ -n "$status" ]]; then
+      info "Removing previous '${status}' release: ${release}"
+      helm uninstall "${release}" -n "${NS}" >>"$LOG" 2>&1 || true
+      sleep 5  # allow Terminating resources to clear before reinstalling
+    fi
     run "Deploying ${release}" helm upgrade --install "${release}" "${CHARTS_DIR}/${chart}" \
       --namespace "${NS}" --wait --timeout 10m "$@"
   fi
