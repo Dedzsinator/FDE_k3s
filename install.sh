@@ -516,6 +516,12 @@ else
   run "Installing Helm" bash <(curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3)
 fi
 
+step "Add Helm repositories"
+for _r in   "ingress-nginx        https://kubernetes.github.io/ingress-nginx"   "jetstack             https://charts.jetstack.io"   "prometheus-community https://prometheus-community.github.io/helm-charts"   "grafana              https://grafana.github.io/helm-charts"; do
+  helm repo add "${_r%% *}" "${_r#* }" >>"$LOG" 2>&1 || true
+done
+run "Update Helm repo index" helm repo update
+
 [[ "$DEPLOY_MODE" == "control-plane" ]] && {
   TOKEN=$(cat /var/lib/rancher/k3s/server/node-token 2>/dev/null || echo "unavailable")
   printf "\n  ${Y}Worker join token:${N}\n  ${W}%s${N}\n" "$TOKEN"
