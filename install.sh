@@ -477,6 +477,11 @@ phase "k3s control-plane"
 
 step "Install k3s"
 if command -v k3s &>/dev/null && kubectl get nodes &>/dev/null 2>&1; then
+  # Ensure traefik is disabled in config even on pre-existing k3s installs
+  mkdir -p /etc/rancher/k3s
+  if ! grep -q 'disable.*traefik' /etc/rancher/k3s/config.yaml 2>/dev/null; then
+    printf '\ndisable:\n  - traefik\n' >> /etc/rancher/k3s/config.yaml
+  fi
   skip "k3s already running"
 else
   _spin_start "Installing k3s"
@@ -546,6 +551,23 @@ fi
 #  PHASE 4 — Ingress + TLS
 # ══════════════════════════════════════════════════════════════════════════════
 phase "Ingress + TLS"
+
+step "Remove Traefik (conflicts with ingress-nginx on ports 80/443)"
+_traefik_status=$(helm status traefik -n kube-system -o json 2>/dev/null | jq -r '.info.status' 2>/dev/null || echo "")
+if [[ -n "$_traefik_status" ]]; then
+  info "Traefik found (status=${_traefik_status}) — removing to free ports 80/443"
+  helm uninstall traefik     -n kube-system >>"$LOG" 2>&1 || true
+  helm uninstall traefik-crd -n kube-system >>"$LOG" 2>&1 || true
+  mkdir -p /etc/rancher/k3s
+  if ! grep -q 'disable.*traefik' /etc/rancher/k3s/config.yaml 2>/dev/null; then
+    printf '\ndisable:\n  - traefik\n' >> /etc/rancher/k3s/config.yaml
+  fi
+  # Give k3s a moment to release the host ports before ingress-nginx tries to claim them
+  sleep 5
+  ok "Traefik removed; persisted disable in /etc/rancher/k3s/config.yaml"
+else
+  skip "Traefik not present"
+fi
 
 step "NGINX Ingress Controller"
 _ing_status=$(helm status ingress-nginx -n ingress-nginx -o json 2>/dev/null | jq -r '.info.status' 2>/dev/null || echo "")
