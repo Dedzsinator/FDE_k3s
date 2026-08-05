@@ -1,3 +1,4 @@
+# Headless service — StatefulSet DNS
 apiVersion: v1
 kind: Service
 metadata:
@@ -5,14 +6,52 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels: {{- include "neo4j.labels" . | nindent 4 }}
 spec:
+  clusterIP: None
   selector: {{- include "neo4j.selectorLabels" . | nindent 4 }}
   ports:
-    - port: {{ .Values.service.bolt.port }}
-      targetPort: {{ .Values.service.bolt.port }}
+    - port: 7687
+      targetPort: 7687
       name: bolt
-    - port: {{ .Values.service.http.port }}
-      targetPort: {{ .Values.service.http.port }}
+    - port: 7474
+      targetPort: 7474
       name: http
-    - port: {{ .Values.service.https.port }}
-      targetPort: {{ .Values.service.https.port }}
-      name: https
+---
+# ClusterIP service — in-cluster clients (bolt + http + prometheus metrics)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "neo4j.fullname" . }}-svc
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "neo4j.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "neo4j.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: 7687
+      targetPort: 7687
+      name: bolt
+    - port: 7474
+      targetPort: 7474
+      name: http
+    - port: 2004
+      targetPort: 2004
+      name: prometheus
+---
+# NodePort service — external access (bolt + http browser)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "neo4j.fullname" . }}-ext
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "neo4j.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector: {{- include "neo4j.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: 7687
+      targetPort: 7687
+      nodePort: {{ .Values.nodePort.bolt }}
+      name: bolt
+    - port: 7474
+      targetPort: 7474
+      nodePort: {{ .Values.nodePort.http }}
+      name: http

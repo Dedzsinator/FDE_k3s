@@ -28,7 +28,7 @@ Steps performed:
   3. Wait for all pods to be Ready
   4. Restore ClickHouse data
   5. Restore Qdrant collection snapshots
-  6. Restore Apache AGE (PostgreSQL) database
+  6. Restore Neo4j database
   7. Done
 
 Arguments:
@@ -186,22 +186,22 @@ else
   unset 'BGPIDS[-1]'
 fi
 
-# ── 6. Restore Apache AGE (PostgreSQL) ───────────────────────────────────────
-phase "6: Apache AGE (PostgreSQL) restore"
-AGE_POD=$(find_pod fde-age)
-DUMP="$TMPDIR/age/fde-age.dump"
-if [[ -z "$AGE_POD" ]]; then
-  warn "fde-age pod not found — skipping"
+# ── 6. Restore Neo4j ─────────────────────────────────────────────────────────
+phase "6: Neo4j restore"
+NEO_POD=$(kubectl get pods -n uns -l app.kubernetes.io/instance=fde-neo4j \
+  -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+DUMP="$TMPDIR/neo4j/neo4j.dump"
+if [[ -z "$NEO_POD" ]]; then
+  warn "fde-neo4j pod not found — skipping"
 elif [[ ! -f "$DUMP" ]]; then
-  warn "No AGE dump in backup archive — skipping"
+  warn "No Neo4j dump in backup archive — skipping"
 else
-  info "Pod: $AGE_POD"
-  kubectl cp "$DUMP" "uns/$AGE_POD:/tmp/fde-age.dump"
-  kubectl exec -n uns "$AGE_POD" -- \
-    pg_restore -U postgres --clean --if-exists \
-    --dbname=postgres /tmp/fde-age.dump 2>/dev/null \
-    && ok "PostgreSQL/AGE database restored" \
-    || warn "pg_restore completed with warnings — verify manually"
+  info "Pod: $NEO_POD"
+  kubectl cp "$DUMP" "uns/$NEO_POD:/tmp/neo4j.dump"
+  kubectl exec -n uns "$NEO_POD" -- \
+    neo4j-admin database load neo4j --from-path=/tmp --overwrite-destination 2>/dev/null \
+    && ok "Neo4j database restored" \
+    || warn "neo4j-admin load completed with warnings — verify manually"
 fi
 
 echo ""

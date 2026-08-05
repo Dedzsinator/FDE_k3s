@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: neo4j
-  tag: "5.18-community"
+  tag: "5.26.28-community"
   pullPolicy: IfNotPresent
 
 auth:
@@ -10,26 +10,19 @@ auth:
   password: "CHANGEME"
 
 resources:
-  neo4j:
-    requests:
-      cpu: "500m"
-      memory: "1Gi"
-    limits:
-      cpu: "2000m"
-      memory: "2Gi"
+  requests:
+    cpu: "500m"
+    memory: "1.5Gi"
+  limits:
+    cpu: "2000m"
+    memory: "2Gi"
 
 storage:
-  data: 10Gi
-  logs: 2Gi
-  import: 1Gi
+  data: 5Gi
 
-service:
-  bolt:
-    port: 7687
-  http:
-    port: 7474
-  https:
-    port: 7473
+nodePort:
+  bolt: 32687
+  http: 32474
 
 config:
   heap_initial_size: 512m

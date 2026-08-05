@@ -118,37 +118,6 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
 
-      - name: age-mcp
-        image: python:3.12-slim
-        command: [python3, /app/age_server.py]
-        env:
-        - name: PYTHONPATH
-          value: /site-packages
-        - name: AGE_HOST
-          value: "127.0.0.1"
-        - name: AGE_PORT
-          value: "32432"
-        - name: AGE_USER
-          value: "age"
-        - name: AGE_PASSWORD
-          value: "fde-age-secret"
-        - name: AGE_DB
-          value: "factory_graph"
-        ports:
-        - containerPort: 9106
-        volumeMounts:
-        - name: app
-          mountPath: /app
-        - name: site-packages
-          mountPath: /site-packages
-        resources:
-          requests: {cpu: 50m, memory: 64Mi}
-          limits:   {cpu: 500m, memory: 256Mi}
-        readinessProbe:
-          tcpSocket:
-            port: 9106
-          initialDelaySeconds: 5
-          periodSeconds: 5
 
       - name: rag-mcp
         image: python:3.12-slim

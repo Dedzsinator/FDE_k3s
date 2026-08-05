@@ -13,51 +13,81 @@ spec:
     metadata:
       labels: {{- include "neo4j.selectorLabels" . | nindent 8 }}
     spec:
+      securityContext:
+        fsGroup: 7474
+        runAsUser: 7474
+        runAsGroup: 7474
+      initContainers:
+        - name: volume-permissions
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R 7474:7474 /data"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /data
       containers:
         - name: neo4j
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          envFrom:
-            - secretRef:
-                name: {{ include "neo4j.fullname" . }}-auth
           env:
+            - name: NEO4J_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "neo4j.fullname" . }}-auth
+                  key: NEO4J_AUTH
             - name: NEO4J_server_memory_heap_initial__size
               value: {{ .Values.config.heap_initial_size | quote }}
             - name: NEO4J_server_memory_heap_max__size
               value: {{ .Values.config.heap_max_size | quote }}
             - name: NEO4J_server_memory_pagecache_size
               value: {{ .Values.config.pagecache_size | quote }}
+            - name: NEO4J_server_default__listen__address
+              value: "0.0.0.0"
+            - name: NEO4J_server_bolt_listen__address
+              value: "0.0.0.0:7687"
+            - name: NEO4J_server_http_listen__address
+              value: "0.0.0.0:7474"
+            - name: NEO4J_server_https_enabled
+              value: "false"
+            - name: NEO4J_dbms_security_allow__csv__import__from__file__urls
+              value: "true"
+            - name: NEO4J_dbms_usage__report_enabled
+              value: "false"
             - name: NEO4J_dbms_security_procedures_unrestricted
               value: "apoc.*,gds.*"
           ports:
-            - containerPort: {{ .Values.service.bolt.port }}
+            - containerPort: 7687
               name: bolt
-            - containerPort: {{ .Values.service.http.port }}
+            - containerPort: 7474
               name: http
-            - containerPort: {{ .Values.service.https.port }}
-              name: https
           readinessProbe:
-            httpGet:
-              path: /
-              port: {{ .Values.service.http.port }}
+            tcpSocket:
+              port: 7687
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 12
           livenessProbe:
-            httpGet:
-              path: /
-              port: {{ .Values.service.http.port }}
+            tcpSocket:
+              port: 7687
             initialDelaySeconds: 60
             periodSeconds: 20
-            failureThreshold: 3
-          resources: {{- toYaml .Values.resources.neo4j | nindent 12 }}
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu | quote }}
+              memory: {{ .Values.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu | quote }}
+              memory: {{ .Values.resources.limits.memory | quote }}
           volumeMounts:
             - name: data
               mountPath: /data
-            - name: logs
-              mountPath: /logs
             - name: import
-              mountPath: /import
+              mountPath: /var/lib/neo4j/import
+      volumes:
+        - name: import
+          emptyDir: {}
       nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
       affinity: {{- toYaml .Values.affinity | nindent 8 }}
@@ -70,19 +100,3 @@ spec:
         resources:
           requests:
             storage: {{ .Values.storage.data }}
-    - metadata:
-        name: logs
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
-        resources:
-          requests:
-            storage: {{ .Values.storage.logs }}
-    - metadata:
-        name: import
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: {{ .Values.global.storageClass | default "local-path" }}
-        resources:
-          requests:
-            storage: {{ .Values.storage.import }}

@@ -81,7 +81,7 @@ MCP_YAML="${SCRIPT_DIR}/mcp-servers-deployment.yaml"
 IGN_MODULES_DIR="${HOME}/ignition-modules"
 
 PW_CLICKHOUSE="${FDE_PW_CLICKHOUSE:-fde-clickhouse-secret}"
-PW_AGE="${FDE_PW_AGE:-fde-age-secret}"
+PW_NEO4J="${FDE_PW_NEO4J:-fde-neo4j-secret}"
 PW_IGNITION="${FDE_PW_IGNITION:-admin}"
 PW_GRAFANA="${FDE_PW_GRAFANA:-fde-grafana-secret}"
 PW_PGADMIN="${FDE_PW_PGADMIN:-admin}"
@@ -91,7 +91,7 @@ FDE_ENV_FILE="${SCRIPT_DIR}/.env"
   # shellcheck source=/dev/null
   source "${FDE_ENV_FILE}"
   PW_CLICKHOUSE="${FDE_PW_CLICKHOUSE:-${PW_CLICKHOUSE}}"
-  PW_AGE="${FDE_PW_AGE:-${PW_AGE}}"
+  PW_NEO4J="${FDE_PW_NEO4J:-${PW_NEO4J}}"
   PW_IGNITION="${FDE_PW_IGNITION:-${PW_IGNITION}}"
   PW_GRAFANA="${FDE_PW_GRAFANA:-${PW_GRAFANA}}"
   PW_PGADMIN="${FDE_PW_PGADMIN:-${PW_PGADMIN}}"
@@ -100,7 +100,7 @@ FDE_ENV_FILE="${SCRIPT_DIR}/.env"
   VLLM_URL="${FDE_VLLM_URL:-${VLLM_URL:-}}"
 }
 
-SVC_NATS=true; SVC_CLICKHOUSE=true; SVC_AGE=true; SVC_QDRANT=true
+SVC_NATS=true; SVC_CLICKHOUSE=true; SVC_NEO4J=true; SVC_QDRANT=true
 SVC_IGNITION=true; SVC_PREDMAINT=true; SVC_MONITORING=true; SVC_LOKI=true
 SVC_PGADMIN=true; SVC_MAESTROHUB=false; SVC_LITMUSEDGE=false; SVC_OBSIDIAN=false
 
@@ -126,7 +126,7 @@ ${W}Options:${N}
   --obs-url <url>      Obsidian REST API URL
   --obs-key <key>      Obsidian REST API key
   --pw-clickhouse <p>  ClickHouse password
-  --pw-age <p>         Apache AGE password
+  --pw-neo4j <p>       Neo4j password
   --pw-ignition <p>    Ignition admin password
   --pw-grafana <p>     Grafana admin password
   --pw-pgadmin <p>     pgAdmin password
@@ -138,7 +138,7 @@ ${W}Options:${N}
 ${W}Environment overrides:${N}
   FDE_IP, FDE_HOSTNAME, FDE_DOMAIN, FDE_SITE, FDE_VLLM_URL,
   FDE_OBS_URL, FDE_OBS_KEY,
-  FDE_PW_CLICKHOUSE, FDE_PW_AGE, FDE_PW_IGNITION, FDE_PW_GRAFANA, FDE_PW_PGADMIN
+  FDE_PW_CLICKHOUSE, FDE_PW_NEO4J, FDE_PW_IGNITION, FDE_PW_GRAFANA, FDE_PW_PGADMIN
 EOF
 }
 
@@ -156,7 +156,7 @@ while [[ $# -gt 0 ]]; do
     --obs-url)        OBS_URL="$2";       shift 2 ;;
     --obs-key)        OBS_KEY="$2";       shift 2 ;;
     --pw-clickhouse)  PW_CLICKHOUSE="$2"; shift 2 ;;
-    --pw-age)         PW_AGE="$2";        shift 2 ;;
+    --pw-neo4j)       PW_NEO4J="$2";      shift 2 ;;
     --pw-ignition)    PW_IGNITION="$2";   shift 2 ;;
     --pw-grafana)     PW_GRAFANA="$2";    shift 2 ;;
     --pw-pgadmin)     PW_PGADMIN="$2";    shift 2 ;;
@@ -165,7 +165,7 @@ while [[ $# -gt 0 ]]; do
       for s in "${_SKIPS[@]}"; do
         case "$s" in
           nats)       SVC_NATS=false ;;       clickhouse) SVC_CLICKHOUSE=false ;;
-          age)        SVC_AGE=false ;;        qdrant)     SVC_QDRANT=false ;;
+          neo4j)     SVC_NEO4J=false ;;       qdrant)     SVC_QDRANT=false ;;
           ignition)   SVC_IGNITION=false ;;   predmaint)  SVC_PREDMAINT=false ;;
           monitoring) SVC_MONITORING=false ;; loki)       SVC_LOKI=false ;;
           pgadmin)    SVC_PGADMIN=false ;;    maestrohub) SVC_MAESTROHUB=false ;;
@@ -257,7 +257,7 @@ wt_services() {
     --checklist "\nSPACE to toggle, arrows to navigate, Enter to confirm:" 22 72 12 \
     "nats"        "Core messaging — NATS (MQTT broker, SparkplugB)"     ON  \
     "clickhouse"  "ClickHouse — time-series historian"                  ON  \
-    "age"         "Apache AGE — graph database (PostgreSQL + AGE)"      ON  \
+    "neo4j"       "Neo4j — graph database (UNS topology + knowledge base)" ON  \
     "qdrant"      "Qdrant — vector database (RAG / embeddings)"         ON  \
     "ignition"    "Ignition SCADA — OT/SCADA platform"                 ON  \
     "predmaint"   "predmaint — ML predictive maintenance inference"     ON  \
@@ -269,14 +269,14 @@ wt_services() {
     "obsidian"    "Obsidian viewer — read-only vault web UI"            OFF \
     3>&1 1>&2 2>&3)
 
-  SVC_NATS=false; SVC_CLICKHOUSE=false; SVC_AGE=false; SVC_QDRANT=false
+  SVC_NATS=false; SVC_CLICKHOUSE=false; SVC_NEO4J=false; SVC_QDRANT=false
   SVC_IGNITION=false; SVC_PREDMAINT=false; SVC_MONITORING=false; SVC_LOKI=false
   SVC_PGADMIN=false; SVC_MAESTROHUB=false; SVC_LITMUSEDGE=false; SVC_OBSIDIAN=false
   for s in $sel; do
     s="${s//\"/}"
     case "$s" in
       nats)       SVC_NATS=true ;;       clickhouse) SVC_CLICKHOUSE=true ;;
-      age)        SVC_AGE=true ;;        qdrant)     SVC_QDRANT=true ;;
+      neo4j)     SVC_NEO4J=true ;;       qdrant)     SVC_QDRANT=true ;;
       ignition)   SVC_IGNITION=true ;;   predmaint)  SVC_PREDMAINT=true ;;
       monitoring) SVC_MONITORING=true ;; loki)       SVC_LOKI=true ;;
       pgadmin)    SVC_PGADMIN=true ;;    maestrohub) SVC_MAESTROHUB=true ;;
@@ -305,14 +305,14 @@ wt_passwords() {
   out=$(whiptail --backtitle "$WT_BT" --title " Custom Passwords " --nocancel \
     --form "\nLeave blank to keep current value:" 14 66 5 \
     "ClickHouse     :" 1 1 "$PW_CLICKHOUSE" 1 19 38 64 \
-    "Apache AGE     :" 2 1 "$PW_AGE"        2 19 38 64 \
+    "Neo4j          :" 2 1 "$PW_NEO4J"      2 19 38 64 \
     "Ignition admin :" 3 1 "$PW_IGNITION"   3 19 38 64 \
     "Grafana admin  :" 4 1 "$PW_GRAFANA"    4 19 38 64 \
     "pgAdmin        :" 5 1 "$PW_PGADMIN"    5 19 38 64 \
     3>&1 1>&2 2>&3) || return 0
   mapfile -t _p <<< "$out"
   [[ -n "${_p[0]:-}" ]] && PW_CLICKHOUSE="${_p[0]}"
-  [[ -n "${_p[1]:-}" ]] && PW_AGE="${_p[1]}"
+  [[ -n "${_p[1]:-}" ]] && PW_NEO4J="${_p[1]}"
   [[ -n "${_p[2]:-}" ]] && PW_IGNITION="${_p[2]}"
   [[ -n "${_p[3]:-}" ]] && PW_GRAFANA="${_p[3]}"
   [[ -n "${_p[4]:-}" ]] && PW_PGADMIN="${_p[4]}"
@@ -322,7 +322,7 @@ wt_confirm() {
   local svc_list=""
   $SVC_NATS        && svc_list+="  ✔ NATS (MQTT broker)\n"
   $SVC_CLICKHOUSE  && svc_list+="  ✔ ClickHouse\n"
-  $SVC_AGE         && svc_list+="  ✔ Apache AGE (graph DB)\n"
+  $SVC_NEO4J       && svc_list+="  ✔ Neo4j (graph DB)\n"
   $SVC_QDRANT      && svc_list+="  ✔ Qdrant (vector DB)\n"
   $SVC_IGNITION    && svc_list+="  ✔ Ignition SCADA\n"
   $SVC_PREDMAINT   && svc_list+="  ✔ predmaint (ML inference)\n"
@@ -576,9 +576,10 @@ $SVC_CLICKHOUSE && _helm_up "fde-clickhouse" "clickhouse" \
   --set "resources.requests.cpu=250m" --set "resources.requests.memory=512Mi" \
   --set "resources.limits.cpu=2000m" --set "resources.limits.memory=4Gi"
 
-$SVC_AGE        && _helm_up "fde-age"       "apache-age" \
-  --set "global.storageClass=local-path" --set "auth.username=age" \
-  --set "auth.password=${PW_AGE}" --set "auth.database=factory_graph"
+$SVC_NEO4J      && _helm_up "fde-neo4j"     "neo4j" \
+  --set "global.storageClass=local-path" \
+  --set "auth.password=${PW_NEO4J}" \
+  --set "nodePort.bolt=32687" --set "nodePort.http=32474"
 
 $SVC_QDRANT     && _helm_up "fde-qdrant"    "qdrant"     \
   --set "global.storageClass=local-path" --set "storage.data=5Gi" \
@@ -670,13 +671,6 @@ items:
     type: NodePort
     selector: {app.kubernetes.io/instance: fde-clickhouse, app.kubernetes.io/name: clickhouse}
     ports: [{port: 8123, targetPort: 8123, nodePort: 32123}]
-- apiVersion: v1
-  kind: Service
-  metadata: {name: fde-age-ext}
-  spec:
-    type: NodePort
-    selector: {app.kubernetes.io/instance: fde-age, app.kubernetes.io/name: apache-age}
-    ports: [{port: 5432, targetPort: 5432, nodePort: 32432}]
 - apiVersion: v1
   kind: Service
   metadata: {name: fde-qdrant-ext}
@@ -883,7 +877,7 @@ FDE_DOMAIN="${DOMAIN}"
 FDE_NS="${NS}"
 
 FDE_PW_CLICKHOUSE="${PW_CLICKHOUSE}"
-FDE_PW_AGE="${PW_AGE}"
+FDE_PW_NEO4J="${PW_NEO4J}"
 FDE_PW_IGNITION="${PW_IGNITION}"
 FDE_PW_GRAFANA="${PW_GRAFANA}"
 FDE_PW_PGADMIN="${PW_PGADMIN}"
@@ -914,7 +908,7 @@ $SVC_NATS       && printf "  ${P}%-22s${N}  mqtt://%s:31883\n"                  
 $SVC_PREDMAINT  && printf "  ${P}%-22s${N}  http://%s:32100/mcp\n"              "predmaint MCP"     "$NODE_IP"
 $SVC_CLICKHOUSE && printf "  ${P}%-22s${N}  http://%s:32123\n"                    "ClickHouse HTTP"   "$NODE_IP"
 $SVC_QDRANT     && printf "  ${P}%-22s${N}  http://%s:32333\n"                    "Qdrant REST"       "$NODE_IP"
-$SVC_AGE        && printf "  ${P}%-22s${N}  postgresql://%s:32432\n"              "Apache AGE"        "$NODE_IP"
+$SVC_NEO4J      && printf "  ${P}%-22s${N}  bolt://%s:32687\n"                    "Neo4j"             "$NODE_IP"
 $SVC_MONITORING && printf "  ${P}%-22s${N}  http://%s:32090\n"                    "Prometheus"        "$NODE_IP"
 $SVC_IGNITION   && printf "  ${P}%-22s${N}  http://%s:30088\n"                    "Ignition NodePort" "$NODE_IP"
 

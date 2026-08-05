@@ -10,7 +10,7 @@ nats:
   enabled: true
 clickhouse:
   enabled: true
-apache-age:
+neo4j:
   enabled: true
 qdrant:
   enabled: true
@@ -61,7 +61,7 @@ clickhouse:
   auth:
     password: "CHANGEME"
 
-apache-age:
+neo4j:
   enabled: true
   global:
     storageClass: ""
@@ -102,8 +102,6 @@ predmaint:
   clickhouse:
     url: "http://fde-clickhouse.uns.svc.cluster.local:8123"
     database: "uns"
-  graph:
-    url: "postgresql://age:CHANGEME@fde-apache-age.uns.svc.cluster.local:5432/factory_graph"
   vector:
     url: "http://fde-qdrant.uns.svc.cluster.local:6333"
 

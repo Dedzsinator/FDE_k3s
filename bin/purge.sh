@@ -93,8 +93,8 @@ helm_del() {
 
 # ── 1. FDE application releases (uns) ────────────────────────────────────────
 phase "1: FDE application releases  (ns=uns)"
-# Release names discovered 2026-07-23 via helm list -A
-for release in predmaint fde-ignition fde-maestrohub fde-pgadmin fde-qdrant fde-clickhouse fde-age fde-nats; do
+# Release names: uns namespace managed releases
+for release in predmaint fde-ignition fde-maestrohub fde-pgadmin fde-qdrant fde-clickhouse fde-neo4j fde-nats; do
   helm_del "$release" uns
 done
 

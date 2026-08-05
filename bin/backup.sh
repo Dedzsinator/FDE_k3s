@@ -8,7 +8,7 @@
 #  Backs up:
 #    - ClickHouse (BACKUP ALL, or CSV export fallback)
 #    - Qdrant     (collection snapshots via REST API)
-#    - Apache AGE (pg_dump of PostgreSQL database)
+#    - Neo4j       (neo4j-admin database dump)
 #    - Helm values for all uns releases
 #    - Full Kubernetes state (all,pvc,configmap,secret,ingress)
 # ════════════════════════════════════════════════════════════════════════════
@@ -176,26 +176,26 @@ else
   unset 'BGPIDS[-1]'
 fi
 
-# ── 4. Apache AGE (PostgreSQL) dump ──────────────────────────────────────────
-phase "4: Apache AGE (PostgreSQL)"
-AGE_POD=$(find_pod fde-age)
-if [[ -z "$AGE_POD" ]]; then
-  warn "fde-age pod not found — skipping"
+# ── 4. Neo4j dump ────────────────────────────────────────────────────────────
+phase "4: Neo4j"
+NEO_POD=$(kubectl get pods -n uns -l app.kubernetes.io/instance=fde-neo4j \
+  -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+if [[ -z "$NEO_POD" ]]; then
+  warn "fde-neo4j pod not found — skipping"
 else
-  info "Pod: $AGE_POD"
-  mkdir -p "$TMPDIR/age"
-  kubectl exec -n uns "$AGE_POD" -- \
-    pg_dump -U postgres --format=custom --file=/tmp/fde-age.dump \
-    2>/dev/null \
-    && kubectl cp "uns/$AGE_POD:/tmp/fde-age.dump" "$TMPDIR/age/fde-age.dump" \
-    && ok "pg_dump complete" \
-    || warn "pg_dump failed — check pod logs"
+  info "Pod: $NEO_POD"
+  mkdir -p "$TMPDIR/neo4j"
+  kubectl exec -n uns "$NEO_POD" -- \
+    neo4j-admin database dump neo4j --to-path=/tmp/neo4j-dump 2>/dev/null \
+    && kubectl cp "uns/$NEO_POD:/tmp/neo4j-dump/neo4j.dump" "$TMPDIR/neo4j/neo4j.dump" \
+    && ok "neo4j-admin dump complete" \
+    || warn "neo4j-admin dump failed — check pod logs"
 fi
 
 # ── 5. Helm values snapshot ───────────────────────────────────────────────────
 phase "5: Helm values"
 mkdir -p "$TMPDIR/helm-values"
-for release in fde-nats fde-age fde-clickhouse fde-qdrant fde-pgadmin \
+for release in fde-nats fde-neo4j fde-clickhouse fde-qdrant fde-pgadmin \
                fde-maestrohub fde-ignition fde-monitoring fde-loki predmaint; do
   if helm status "$release" -n uns &>/dev/null; then
     helm get values "$release" -n uns \

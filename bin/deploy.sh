@@ -6,7 +6,7 @@
 #         ./deploy.sh --help
 #
 #  Release names discovered 2026-07-23 via helm list -A on nandor:
-#    uns ns  : fde-nats, fde-age, fde-clickhouse, fde-qdrant, fde-pgadmin,
+#    uns ns  : fde-nats, fde-neo4j, fde-clickhouse, fde-qdrant, fde-pgadmin,
 #              fde-maestrohub, fde-ignition, fde-monitoring, fde-loki, predmaint
 #    infra   : ingress-nginx (ingress-nginx ns), cert-manager (cert-manager ns)
 # ════════════════════════════════════════════════════════════════════════════
@@ -139,7 +139,7 @@ phase "10: FDE application releases  (ns=uns)"
 # Maps: Helm release name → chart subdirectory under $CHART_DIR/charts/
 declare -A CHART_MAP=(
   [fde-nats]=nats
-  [fde-age]=apache-age
+  [fde-neo4j]=neo4j
   [fde-clickhouse]=clickhouse
   [fde-qdrant]=qdrant
   [fde-pgadmin]=pgadmin
@@ -149,13 +149,12 @@ declare -A CHART_MAP=(
 )
 # Optional per-release values files (relative to CHART_DIR)
 declare -A VALUES_MAP=(
-  [fde-age]="$CHART_DIR/values-age.yaml"
   [fde-clickhouse]="$CHART_DIR/values-clickhouse.yaml"
   [fde-qdrant]="$CHART_DIR/values-qdrant.yaml"
 )
 
 # Deployment order: messaging first, then storage, then apps
-RELEASE_ORDER=(fde-nats fde-age fde-clickhouse fde-qdrant fde-pgadmin fde-maestrohub fde-ignition predmaint)
+RELEASE_ORDER=(fde-nats fde-neo4j fde-clickhouse fde-qdrant fde-pgadmin fde-maestrohub fde-ignition predmaint)
 
 for release in "${RELEASE_ORDER[@]}"; do
   chart_path="$CHART_DIR/charts/${CHART_MAP[$release]}"

@@ -5,7 +5,7 @@ description: |
   Full IIoT / Unified Namespace stack — all Apache 2.0, no SaaS limits:
     Messaging:    NATS JetStream (replaces MonsterMQ)
     Time-series:  ClickHouse (replaces TimeBase/InfluxDB)
-    Graph DB:     Apache Age on PostgreSQL (replaces Neo4j/Memgraph)
+    Graph DB:     Neo4j Community (UNS topology + knowledge base)
     Vector DB:    Qdrant (semantic search, RAG for external vLLM)
     OT Edge:      Ignition SCADA + LitmusEdge
     Simulation:   dc-sim (Weibull degradation, hot-reload)
@@ -29,11 +29,11 @@ dependencies:
     repository: "file://../clickhouse"
     condition: clickhouse.enabled
 
-  # ── Graph database (replaces Neo4j / Memgraph) ────────────────────────────
-  - name: apache-age
-    version: "0.1.0"
-    repository: "file://../apache-age"
-    condition: apache-age.enabled
+  # ── Graph database ────────────────────────────────────────────────────────
+  - name: neo4j
+    version: "0.2.0"
+    repository: "file://../neo4j"
+    condition: neo4j.enabled
 
   # ── Vector store for RAG with external vLLM ───────────────────────────────
   - name: qdrant

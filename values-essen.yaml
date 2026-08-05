@@ -38,14 +38,14 @@ clickhouse:
     data: 20Gi
     logs: 2Gi
 
-apache-age:
+neo4j:
   nodeSelector: {}
   resources:
     requests:
-      cpu: "100m"
-      memory: "256Mi"
+      cpu: "500m"
+      memory: "1.5Gi"
     limits:
-      cpu: "1000m"
+      cpu: "2000m"
       memory: "2Gi"
   storage:
     data: 5Gi
@@ -79,8 +79,6 @@ predmaint:
   clickhouse:
     url: "http://fde-clickhouse.uns.svc.cluster.local:8123"
     database: "uns"
-  graph:
-    url: "postgresql://age:CHANGEME@fde-apache-age.uns.svc.cluster.local:5432/factory_graph"
   vector:
     url: "http://fde-qdrant.uns.svc.cluster.local:6333"
 
