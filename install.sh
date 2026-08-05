@@ -859,7 +859,12 @@ phase "MCP servers"
 
 if [[ -f "$MCP_YAML" ]]; then
   step "Apply mcp-servers-deployment.yaml"
-  run "Applying MCP deployment" kubectl apply -f "$MCP_YAML" -n "${NS}"
+  MCP_DIR="${SCRIPT_DIR}/mcp-servers"
+  mkdir -p "${MCP_DIR}/.fastembed_cache"
+  _mcp_rendered=$(mktemp)
+  sed "s|__MCP_DIR__|${MCP_DIR}|g" "$MCP_YAML" > "$_mcp_rendered"
+  run "Applying MCP deployment" kubectl apply -f "$_mcp_rendered" -n "${NS}"
+  rm -f "$_mcp_rendered"
 else
   warn "mcp-servers-deployment.yaml not found at ${MCP_YAML} — skipping MCP deployment"
 fi

@@ -1,0 +1,7 @@
+fastmcp==3.2.4
+qdrant-client>=1.7,<1.12
+fastembed
+psycopg2-binary
+neo4j
+PyYAML
+cryptography
