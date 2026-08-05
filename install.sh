@@ -589,7 +589,8 @@ else
     --repo https://kubernetes.github.io/ingress-nginx \
     --namespace ingress-nginx --create-namespace \
     --set controller.hostNetwork=true --set controller.kind=DaemonSet \
-    --set controller.admissionWebhooks.enabled=false
+    --set controller.admissionWebhooks.enabled=false \
+    --set controller.service.type=ClusterIP
   _spin_start "Waiting for ingress-nginx DaemonSet (image pull may take a while)"
   kubectl rollout status daemonset/ingress-nginx-controller \
     -n ingress-nginx --timeout=15m >>"$LOG" 2>&1 \
