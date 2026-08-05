@@ -37,6 +37,13 @@ show_banner() {
     '                   ######%%%##*#'
   printf '%s%s\n' '               ###########%%%' "${L}%%%"
   printf '%s\n' '          #################%%' '      #################'
+  printf '%s\n' \
+    '     #*****************#*#' \
+    ' #******************#' \
+    ' #************#**' \
+    ' #*********#' \
+    ' #****##' \
+    ' *#'
   printf '%s\n' "${N}"
   printf "        ${W}Factory Digital Edge${N}  ${D}·${N}  ${P}Accenture${N}\n"
   printf "        ${D}Full K8s Stack Installer  v%s${N}\n" "$INSTALLER_VERSION"
