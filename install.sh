@@ -628,6 +628,13 @@ _helm_up() {
       helm uninstall "${release}" -n "${NS}" >>"$LOG" 2>&1 || true
       sleep 5
     fi
+    # Build subchart dependencies (loki-stack, kube-prometheus-stack, etc.) if needed
+    if grep -q '^dependencies:' "${CHARTS_DIR}/${chart}/Chart.yaml" 2>/dev/null; then
+      _spin_start "Building chart dependencies for ${chart}"
+      helm dependency build "${CHARTS_DIR}/${chart}" >>"$LOG" 2>&1 \
+        && _spin_stop "Dependencies ready" \
+        || { _spin_stop "dep build"; warn "helm dependency build failed for ${chart} — continuing"; }
+    fi
     run "Deploying ${release}" helm upgrade --install "${release}" "${CHARTS_DIR}/${chart}" \
       --namespace "${NS}" "$@"
     # Wait separately so a slow image pull warns instead of aborting the installer

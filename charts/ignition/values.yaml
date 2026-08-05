@@ -39,9 +39,9 @@ config:
 global:
   storageClass: ""
 
-# Ignition needs privileged access to the OT network; pin to OT-edge nodes
-nodeSelector:
-  uns.fde/tier: ot-edge
+# Default: no node pinning (single-node). Override to pin to OT-edge nodes:
+#   --set "nodeSelector.uns\.fde/tier=ot-edge"
+nodeSelector: {}
 
 tolerations: []
 
