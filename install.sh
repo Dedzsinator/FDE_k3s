@@ -714,20 +714,51 @@ if $SVC_PREDMAINT; then
   if [[ "$_ps" == "deployed" ]]; then
     skip "predmaint"
   else
-    _pm_args=()
+    # Build image locally and import into k3s containerd so any server can run it
+    _pm_image="localhost:5000/predmaint"; _pm_tag="latest"; _pm_pull="Always"
+    if [[ -f "${SCRIPT_DIR}/predmaint/Dockerfile" ]]; then
+      if command -v docker &>/dev/null; then
+        run "Build predmaint image" docker build -q -t predmaint:fde "${SCRIPT_DIR}/predmaint"
+        _spin_start "Import predmaint into k3s containerd"
+        docker save predmaint:fde | k3s ctr images import - >>"$LOG" 2>&1 \
+          && _spin_stop "predmaint image ready" || _spin_stop "import failed (will try pull)"
+        _pm_image="predmaint"; _pm_tag="fde"; _pm_pull="Never"
+      elif k3s check-config &>/dev/null 2>&1; then
+        run "Build predmaint (nerdctl via k3s)" \
+          nerdctl --address /run/k3s/containerd/containerd.sock \
+                  -n k8s.io build -q -t predmaint:fde "${SCRIPT_DIR}/predmaint"
+        _pm_image="predmaint"; _pm_tag="fde"; _pm_pull="Never"
+      else
+        warn "No build tool found — predmaint will attempt pull from ${_pm_image}:${_pm_tag}"
+      fi
+    fi
+    if [[ -n "$_ps" ]]; then
+      helm uninstall predmaint -n "${NS}" >>"$LOG" 2>&1 || true; sleep 3
+    fi
+    _pm_args=(
+      --set "image.repository=${_pm_image}"
+      --set "image.tag=${_pm_tag}"
+      --set "image.pullPolicy=${_pm_pull}"
+      --set "env.CLICKHOUSE_URL=http://fde-clickhouse-clickhouse.uns.svc.cluster.local:8123"
+      --set "env.CLICKHOUSE_USER=default"
+      --set "env.CLICKHOUSE_PASSWORD=${PW_CLICKHOUSE}"
+      --set "env.MQTT_BROKER=fde-emqx-svc.uns.svc.cluster.local"
+      --set "env.MQTT_PORT=1883"
+      --set "env.MQTT_ALARM_ENABLED=true"
+      --set "env.UNS_GROUP=dc"
+      --set "env.UNS_EDGE_NODE=blans"
+      --set "env.SCAN_INTERVAL_S=300"
+    )
     [[ -n "$VLLM_URL" ]] && _pm_args+=(--set "llm.endpoint=${VLLM_URL}")
     run "Deploying predmaint" helm upgrade --install predmaint "${CHARTS_DIR}/predmaint" \
-      --namespace "${NS}" --wait --timeout 10m \
-      --set "env.CLICKHOUSE_URL=http://fde-clickhouse-clickhouse.uns.svc.cluster.local:8123" \
-      --set "env.CLICKHOUSE_USER=default" \
-      --set "env.CLICKHOUSE_PASSWORD=${PW_CLICKHOUSE}" \
-      --set "env.MQTT_BROKER=fde-emqx-svc.uns.svc.cluster.local" \
-      --set "env.MQTT_PORT=1883" \
-      --set "env.MQTT_ALARM_ENABLED=true" \
-      --set "env.UNS_GROUP=dc" \
-      --set "env.UNS_EDGE_NODE=blans" \
-      --set "env.SCAN_INTERVAL_S=300" \
-      "${_pm_args[@]}"
+      --namespace "${NS}" "${_pm_args[@]}"
+    _wl=$(kubectl get deploy -n "${NS}" -l "app.kubernetes.io/instance=predmaint" -o name 2>/dev/null | head -1 || true)
+    if [[ -n "${_wl:-}" ]]; then
+      _spin_start "Waiting for predmaint"
+      kubectl rollout status "${_wl}" -n "${NS}" --timeout=10m >>"$LOG" 2>&1 \
+        && _spin_stop "predmaint ready" \
+        || { _spin_stop "predmaint"; warn "predmaint not ready — check: kubectl get pods -n ${NS}"; }
+    fi
   fi
 fi
 
