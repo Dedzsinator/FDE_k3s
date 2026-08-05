@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: n8nio/n8n
-  tag: "1.44"
+  tag: "latest"
   pullPolicy: IfNotPresent
 
 auth:
