@@ -260,7 +260,7 @@ spec:
         - name: OBSIDIAN_API_KEY
           value: "a9148b82dd5e61801a167c230613c3d468da1ba27a922180f31ff5416c98c5ef"
         ports:
-        - containerPort: 9109
+        - containerPort: 9106
         volumeMounts:
         - name: app
           mountPath: /app
@@ -271,7 +271,7 @@ spec:
           limits:   {cpu: 500m, memory: 512Mi}
         readinessProbe:
           tcpSocket:
-            port: 9109
+            port: 9106
           initialDelaySeconds: 10
           periodSeconds: 10
 
