@@ -859,6 +859,20 @@ phase "MCP servers"
 
 if [[ -f "$MCP_YAML" ]]; then
   step "Apply mcp-servers-deployment.yaml"
+
+  # Vaultwarden credentials for the vaultwarden-mcp container
+  if ! kubectl get secret vaultwarden-user-creds -n "${NS}" &>/dev/null; then
+    _vw_email="${VW_EMAIL:-nandor.degi@accenture.com}"
+    _vw_pass="${VW_PASSWORD:-admin}"
+    run "Creating vaultwarden-user-creds secret" \
+      kubectl create secret generic vaultwarden-user-creds \
+        --from-literal=VW_EMAIL="${_vw_email}" \
+        --from-literal=VW_PASSWORD="${_vw_pass}" \
+        -n "${NS}"
+  else
+    skip "vaultwarden-user-creds"
+  fi
+
   MCP_DIR="${SCRIPT_DIR}/mcp-servers"
   mkdir -p "${MCP_DIR}/.fastembed_cache"
   _mcp_rendered=$(mktemp)
