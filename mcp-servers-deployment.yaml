@@ -278,11 +278,11 @@ spec:
       volumes:
       - name: app
         hostPath:
-          path: /home/nandor/mcp-servers
+          path: __MCP_DIR__
           type: Directory
       - name: site-packages
         emptyDir: {}
       - name: fastembed-cache
         hostPath:
-          path: /var/lib/docker/volumes/mcp-servers_fastembed_cache/_data
+          path: __MCP_DIR__/.fastembed_cache
           type: DirectoryOrCreate
