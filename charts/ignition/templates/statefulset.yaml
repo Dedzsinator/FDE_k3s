@@ -13,6 +13,23 @@ spec:
     metadata:
       labels: {{- include "ignition.selectorLabels" . | nindent 8 }}
     spec:
+      initContainers:
+        - name: init-data
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /mnt/data/gateway.xml_clean ]; then
+                echo "First run: seeding data dir from image..."
+                cp -rn /usr/local/bin/ignition/data/. /mnt/data/ 2>/dev/null || true
+                echo "Seed complete."
+              else
+                echo "Data already initialised — skipping seed."
+              fi
+          volumeMounts:
+            - name: data
+              mountPath: /mnt/data
       containers:
         - name: ignition
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
