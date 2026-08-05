@@ -552,12 +552,21 @@ _ing_status=$(helm status ingress-nginx -n ingress-nginx -o json 2>/dev/null | j
 if [[ "$_ing_status" == "deployed" ]]; then
   skip "ingress-nginx"
 else
-  run "Deploy ingress-nginx" helm upgrade --install ingress-nginx ingress-nginx \
+  # Purge any leftover failed/pending release so helm install starts clean
+  if [[ -n "$_ing_status" ]]; then
+    info "Removing previous '${_ing_status}' ingress-nginx release"
+    helm uninstall ingress-nginx -n ingress-nginx >>"$LOG" 2>&1 || true
+  fi
+  run "Install ingress-nginx chart" helm upgrade --install ingress-nginx ingress-nginx \
     --repo https://kubernetes.github.io/ingress-nginx \
     --namespace ingress-nginx --create-namespace \
     --set controller.hostNetwork=true --set controller.kind=DaemonSet \
-    --set controller.admissionWebhooks.enabled=false \
-    --wait --timeout 10m
+    --set controller.admissionWebhooks.enabled=false
+  _spin_start "Waiting for ingress-nginx DaemonSet (image pull may take a while)"
+  kubectl rollout status daemonset/ingress-nginx-controller \
+    -n ingress-nginx --timeout=15m >>"$LOG" 2>&1 \
+    && _spin_stop "ingress-nginx ready" \
+    || { _spin_stop "ingress-nginx (check: kubectl get pods -n ingress-nginx)"; warn "ingress-nginx not fully ready — continuing"; }
 fi
 
 step "cert-manager"
@@ -565,10 +574,15 @@ _cm_status=$(helm status cert-manager -n cert-manager -o json 2>/dev/null | jq -
 if [[ "$_cm_status" == "deployed" ]]; then
   skip "cert-manager"
 else
-  run "Deploy cert-manager" helm upgrade --install cert-manager cert-manager \
+  [[ -n "$_cm_status" ]] && { info "Removing previous cert-manager release"; helm uninstall cert-manager -n cert-manager >>"$LOG" 2>&1 || true; }
+  run "Install cert-manager chart" helm upgrade --install cert-manager cert-manager \
     --repo https://charts.jetstack.io \
     --namespace cert-manager --create-namespace \
-    --set installCRDs=true --wait --timeout 5m
+    --set installCRDs=true
+  _spin_start "Waiting for cert-manager"
+  kubectl rollout status deployment/cert-manager -n cert-manager --timeout=10m >>"$LOG" 2>&1 \
+    && _spin_stop "cert-manager ready" \
+    || { _spin_stop "cert-manager (check: kubectl get pods -n cert-manager)"; warn "cert-manager not fully ready — continuing"; }
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -587,6 +601,7 @@ _helm_up() {
   if [[ "$status" == "deployed" ]]; then
     skip "${release}"
   else
+    [[ -n "$status" ]] && { info "Removing previous '${status}' release: ${release}"; helm uninstall "${release}" -n "${NS}" >>"$LOG" 2>&1 || true; }
     run "Deploying ${release}" helm upgrade --install "${release}" "${CHARTS_DIR}/${chart}" \
       --namespace "${NS}" --wait --timeout 10m "$@"
   fi
