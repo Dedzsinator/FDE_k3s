@@ -20,7 +20,7 @@ Y=$'\e[38;5;220m'; R=$'\e[38;5;196m'; D=$'\e[38;5;244m'; N=$'\e[0m'
 # ── Banner ────────────────────────────────────────────────────────────────────
 show_banner() {
   clear
-  # Use printf '%s'/'%s\n' so % in the art strings are never treated as format specifiers
+  # Top arm: P (purple). Bottom arm: L (lavender), exact mirror of top.
   printf '%s' "${P}"
   printf '%s\n' \
     ' *#' \
@@ -32,12 +32,15 @@ show_banner() {
     '         *#*****************##' \
     '              #******************#' \
     '                  #****************#' \
-    '                      ###**********#' \
-    '                       #%%##*****#' \
-    '                   ######%%%##*#'
-  printf '%s%s\n' '               ###########%%%' "${L}%%%"
-  printf '%s\n' '          #################%%' '      #################'
+    '                      ###**********#'
+  # TIP — P→L colour transition mid-line
+  printf '%s%s\n' '                       #%%' "${L}##*****#"
+  # Bottom arm: exact mirror of top arm (lines 10→1), in L colour
   printf '%s\n' \
+    '                      ###**********#' \
+    '                  #****************#' \
+    '              #******************#' \
+    '         *#*****************##' \
     '     #*****************#*#' \
     ' #******************#' \
     ' #************#**' \
@@ -526,12 +529,15 @@ else
     https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/tigera-operator.yaml
   run "Calico CRs" kubectl create -f \
     https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/custom-resources.yaml
-  _spin_start "Waiting for Calico"
+  _spin_start "Waiting for node Ready"
   for i in $(seq 1 40); do
     [[ "$(kubectl get nodes --no-headers 2>/dev/null | grep -c ' Ready' || echo 0)" -ge 1 ]] && break
     sleep 5
   done
-  _spin_stop "Calico ready"
+  _spin_stop "Node Ready"
+  _spin_start "Waiting for calico-node DaemonSet"
+  kubectl rollout status daemonset/calico-node -n calico-system --timeout=120s >>"$LOG" 2>&1 || true
+  _spin_stop "Calico network ready"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -548,7 +554,8 @@ else
     --repo https://kubernetes.github.io/ingress-nginx \
     --namespace ingress-nginx --create-namespace \
     --set controller.hostNetwork=true --set controller.kind=DaemonSet \
-    --wait --timeout 5m
+    --set controller.admissionWebhooks.enabled=false \
+    --wait --timeout 10m
 fi
 
 step "cert-manager"
