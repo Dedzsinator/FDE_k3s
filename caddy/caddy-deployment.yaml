@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caddy-config
+  namespace: uns
+data:
+  Caddyfile: |
+    {
+        https_port 9443
+        http_port  9080
+    }
+
+    ignition.fde-essen.local ignition.fde-essen {
+        tls internal
+        reverse_proxy localhost:30088
+    }
+
+    grafana.fde-essen.local grafana.fde-essen {
+        tls internal
+        reverse_proxy localhost:32300
+    }
+
+    neo4j.fde-essen.local neo4j.fde-essen {
+        tls internal
+        reverse_proxy localhost:32474
+    }
+
+    pgadmin.fde-essen.local pgadmin.fde-essen {
+        tls internal
+        reverse_proxy localhost:32500
+    }
+
+    emqx.fde-essen.local emqx.fde-essen {
+        tls internal
+        reverse_proxy localhost:32083
+    }
+
+    clickhouse.fde-essen.local clickhouse.fde-essen {
+        tls internal
+        reverse_proxy localhost:32123
+    }
+
+    qdrant.fde-essen.local qdrant.fde-essen {
+        tls internal
+        reverse_proxy localhost:32333
+    }
+
+    predmaint.fde-essen.local predmaint.fde-essen {
+        tls internal
+        reverse_proxy localhost:32100
+    }
+
+    notes.fde-essen.local notes.fde-essen {
+        tls internal
+        reverse_proxy localhost:32400
+    }
+
+    prometheus.fde-essen.local prometheus.fde-essen {
+        tls internal
+        reverse_proxy localhost:32090
+    }
+
+    nats.fde-essen.local nats.fde-essen {
+        tls internal
+        reverse_proxy localhost:32222
+    }
+
+    vault.fde-essen.local vault.fde-essen {
+        tls internal
+        reverse_proxy /notifications/hub localhost:3012
+        reverse_proxy 10.102.104.148:80
+    }
+
+    mcp-qdrant.fde-essen.local mcp-qdrant.fde-essen {
+        tls internal
+        reverse_proxy localhost:9103
+    }
+
+    mcp-ignition.fde-essen.local mcp-ignition.fde-essen {
+        tls internal
+        reverse_proxy localhost:9104
+    }
+
+    mcp-clickhouse.fde-essen.local mcp-clickhouse.fde-essen {
+        tls internal
+        reverse_proxy localhost:9105
+    }
+
+    mcp-neo4j.fde-essen.local mcp-neo4j.fde-essen {
+        tls internal
+        reverse_proxy localhost:9106
+    }
+
+    mcp-rag.fde-essen.local mcp-rag.fde-essen {
+        tls internal
+        reverse_proxy localhost:9107
+    }
+
+    mcp-obsidian.fde-essen.local mcp-obsidian.fde-essen {
+        tls internal
+        reverse_proxy localhost:9108
+    }
+
+    mcp-fs.fde-essen.local mcp-fs.fde-essen {
+        tls internal
+        reverse_proxy localhost:9110
+    }
+
+    mcp-vault.fde-essen.local mcp-vault.fde-essen {
+        tls internal
+        reverse_proxy localhost:9111
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caddy
+  namespace: uns
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: caddy}
+  template:
+    metadata:
+      labels: {app: caddy}
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: caddy
+        image: caddy:2-alpine
+        ports:
+        - containerPort: 9443
+        - containerPort: 9080
+        volumeMounts:
+        - name: config
+          mountPath: /etc/caddy/Caddyfile
+          subPath: Caddyfile
+        - name: data
+          mountPath: /data
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits: {cpu: 200m, memory: 256Mi}
+        readinessProbe:
+          tcpSocket: {port: 9443}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: config
+        configMap:
+          name: caddy-config
+      - name: data
+        hostPath:
+          path: /var/lib/caddy-data
+          type: DirectoryOrCreate

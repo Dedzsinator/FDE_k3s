@@ -979,6 +979,37 @@ fi
 # ══════════════════════════════════════════════════════════════════════════════
 #  PHASE 10 — Verification
 # ══════════════════════════════════════════════════════════════════════════════
+
+# ================================================================================
+#  PHASE N - Caddy TLS gateway  (k8s pod, hostNetwork, port 9443)
+#  External access: router -> 5912 -> nandor:9443
+# ================================================================================
+phase "Caddy TLS gateway"
+
+_caddy_yaml="${SCRIPT_DIR}/caddy/caddy-deployment.yaml"
+
+if [[ ! -f "$_caddy_yaml" ]]; then
+  warn "caddy/caddy-deployment.yaml not found at ${_caddy_yaml} -- skipping"
+else
+  step "Render Caddyfile (domain=${DOMAIN})"
+  _dom="${DOMAIN:-fde-essen.local}"
+  _short="${_dom%.local}"
+  _vw_ip=$(kubectl get svc vaultwarden -n "${NS}" -o jsonpath='{.spec.clusterIP}' 2>/dev/null || echo "10.102.104.148")
+  _caddy_rendered=$(mktemp)
+  sed -e "s/fde-essen\.local/${_dom}/g" \
+      -e "s/fde-essen\./${_short}./g" \
+      -e "s|10\.102\.104\.148|${_vw_ip}|g" \
+      "$_caddy_yaml" > "$_caddy_rendered"
+  run "Apply Caddy ConfigMap + Deployment" kubectl apply -f "$_caddy_rendered" -n "${NS}"
+  rm -f "$_caddy_rendered"
+  _spin_start "Waiting for Caddy pod"
+  kubectl rollout status deployment/caddy -n "${NS}" --timeout=2m >>"$LOG" 2>&1 \
+    && _spin_stop "Caddy ready on :9443" \
+    || { _spin_stop "Caddy not ready"; warn "check: kubectl logs -n ${NS} -l app=caddy"; }
+  ok "Caddy :9443 -- add router forward: 5912 -> ${NODE_IP}:9443"
+fi
+
+
 phase "Verification"
 
 step "Pod status (ns=${NS})"
