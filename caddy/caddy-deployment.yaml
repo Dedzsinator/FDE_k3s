@@ -6,8 +6,8 @@ metadata:
 data:
   Caddyfile: |
     {
-        https_port 9443
-        http_port  9080
+        https_port 9444
+        http_port  9081
     }
 
     ignition.fde-essen.local ignition.fde-essen {
@@ -130,8 +130,8 @@ spec:
       - name: caddy
         image: caddy:2-alpine
         ports:
-        - containerPort: 9443
-        - containerPort: 9080
+        - containerPort: 9444
+        - containerPort: 9081
         volumeMounts:
         - name: config
           mountPath: /etc/caddy/Caddyfile
@@ -142,7 +142,7 @@ spec:
           requests: {cpu: 50m, memory: 64Mi}
           limits: {cpu: 200m, memory: 256Mi}
         readinessProbe:
-          tcpSocket: {port: 9443}
+          tcpSocket: {port: 9444}
           initialDelaySeconds: 5
           periodSeconds: 10
       volumes:

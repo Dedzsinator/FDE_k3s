@@ -981,7 +981,7 @@ fi
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ================================================================================
-#  PHASE N - Caddy TLS gateway  (k8s pod, hostNetwork, port 9443)
+#  PHASE N - Caddy TLS gateway  (k8s pod, hostNetwork, port 9444)
 #  External access: router -> 5912 -> nandor:9443
 # ================================================================================
 phase "Caddy TLS gateway"
@@ -1006,7 +1006,7 @@ else
   kubectl rollout status deployment/caddy -n "${NS}" --timeout=2m >>"$LOG" 2>&1 \
     && _spin_stop "Caddy ready on :9443" \
     || { _spin_stop "Caddy not ready"; warn "check: kubectl logs -n ${NS} -l app=caddy"; }
-  ok "Caddy :9443 -- add router forward: 5912 -> ${NODE_IP}:9443"
+  ok "Caddy :9443 -- add router forward: 5912 -> ${NODE_IP}:9444"
 fi
 
 
